@@ -31,7 +31,7 @@
     </div>
 
     <!-- Title -->
-    <h3 class="text-base font-semibold text-slate-900 leading-snug mb-2 line-clamp-2 group-hover:text-brand-600 transition-colors">
+    <h3 class="text-base font-semibold text-slate-900 leading-snug mb-2 line-clamp-2 group-hover:text-brand-600 transition-colors break-all">
       {{ news.title }}
     </h3>
 
@@ -101,11 +101,11 @@ export default {
         return `${days}天前`
       }
       
-      // Show date in YYYY-MM-DD format
+      // Show date in YYYY年MM月DD日 format
       const year = date.getFullYear()
       const month = String(date.getMonth() + 1).padStart(2, '0')
       const day = String(date.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
+      return `${year}年${month}月${day}日`
     }
 
     // Format hot score

@@ -22,7 +22,7 @@
 
           <!-- Date -->
           <div class="text-sm text-slate-500">
-            <span class="hidden sm:block">{{ currentDate }}</span>
+            <span>{{ currentDate }}</span>
           </div>
         </div>
       </div>
@@ -236,12 +236,14 @@ export default {
     // Current date display
     const currentDate = computed(() => {
       const now = new Date()
-      return now.toLocaleDateString('zh-CN', {
+      const dateStr = now.toLocaleDateString('zh-CN', {
         year: 'numeric',
         month: 'long',
-        day: 'numeric',
-        weekday: 'long'
+        day: 'numeric'
       })
+      // const weekday = now.toLocaleDateString('zh-CN', { weekday: 'long' })
+      // return `${dateStr} ${weekday}`
+      return `${dateStr}`
     })
 
     // Visible page numbers for pagination
