@@ -31,7 +31,7 @@ news-aggregator/
 
 ```bash
 cd backend
-python -m venv venv
+python3 -m venv venv 2>/dev/null || true
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 python app.py             # Start API server
@@ -54,12 +54,12 @@ npm run dev
 
 ## API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/news` | GET | Get paginated news list |
-| `/api/news/:id` | GET | Get single news item |
-| `/api/categories` | GET | Get all categories |
-| `/api/health` | GET | Health check |
+| Endpoint            | Method | Description             |
+| ------------------- | ------ | ----------------------- |
+| `/api/news`       | GET    | Get paginated news list |
+| `/api/news/:id`   | GET    | Get single news item    |
+| `/api/categories` | GET    | Get all categories      |
+| `/api/health`     | GET    | Health check            |
 
 ## License
 
