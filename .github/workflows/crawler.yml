@@ -2,9 +2,8 @@ name: Daily Crawler
 
 on:
   schedule:
-    # Run daily at 0:00 UTC (8:00 AM Beijing Time)
     - cron: '0 0 * * *'
-  workflow_dispatch:  # Allow manual triggering
+  workflow_dispatch:
 
 jobs:
   crawl:
