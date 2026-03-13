@@ -287,6 +287,7 @@
 
 <script>
 import { ref, computed, onMounted, watch } from 'vue'
+import { inject } from '@vercel/analytics'
 import NewsCard from './components/NewsCard.vue'
 import SkeletonCard from './components/SkeletonCard.vue'
 
@@ -530,6 +531,7 @@ export default {
 
     // Initial fetch
     onMounted(() => {
+      inject()
       fetchCategories()
       fetchNews()
       // Update fade indicators on window resize
