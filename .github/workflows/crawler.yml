@@ -1,0 +1,45 @@
+name: Daily Crawler
+
+on:
+  schedule:
+    # Run daily at 0:00 UTC (8:00 AM Beijing Time)
+    - cron: '0 0 * * *'
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Run crawler
+        run: |
+          cd backend
+          python crawler.py
+
+      - name: Commit database changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backend/news.db
+          git diff --quiet && git diff --staged --quiet || git commit -m "chore: auto update news [skip ci]"
+          git push
+
+      - name: Create summary
+        run: |
+          echo "## Crawler Summary" >> $GITHUB_STEP_SUMMARY
+          echo "News database updated successfully." >> $GITHUB_STEP_SUMMARY
+          echo "Timestamp: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
