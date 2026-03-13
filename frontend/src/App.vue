@@ -33,7 +33,7 @@
       <div class="max-w-5xl mx-auto px-4 sm:px-6 py-3">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <!-- Category Tabs -->
-          <div class="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
+          <div class="w-fit flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
             <button
               v-for="cat in categories"
               :key="cat.value"
@@ -51,7 +51,6 @@
 
           <!-- Sort Toggle -->
           <div class="flex items-center gap-2">
-            <span class="text-sm text-slate-500">排序</span>
             <div class="flex items-center bg-slate-100 rounded-lg p-0.5">
               <button
                 v-for="sort in sortOptions"
@@ -73,7 +72,7 @@
     </div>
 
     <!-- ========== Main Content (flex-grow to push footer down) ========== -->
-    <main class="flex-grow max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-36">
+    <main class="flex-grow max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-36 w-full">
       <!-- Loading State - Skeleton Cards -->
       <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <SkeletonCard v-for="i in 6" :key="i" />
@@ -123,29 +122,29 @@
     <div class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-slate-200 z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
       <!-- Pagination (only show when multiple pages) -->
       <div v-if="!loading && !error && totalPages > 1" class="max-w-5xl mx-auto px-4 sm:px-6 py-4">
-        <nav class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-2" aria-label="分页导航">
+        <nav class="flex items-center justify-center gap-2 sm:gap-4" aria-label="分页导航">
           <!-- Pagination Row -->
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-1.5 sm:gap-3">
             <!-- Previous Button -->
             <button
               @click="goToPage(currentPage - 1)"
               :disabled="currentPage === 1"
-              class="flex items-center gap-1 px-4 py-2 text-sm font-medium text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
+              class="flex items-center gap-1 px-2 sm:px-4 py-2 text-sm font-medium text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
               </svg>
-              上一页
+              <span class="hidden sm:inline">上一页</span>
             </button>
 
             <!-- Page Numbers -->
-            <div class="flex items-center gap-1.5">
+            <div class="flex items-center gap-1 sm:gap-2">
               <button
                 v-for="page in visiblePages"
                 :key="page"
                 @click="goToPage(page)"
                 :class="[
-                  'min-w-[40px] h-10 px-3 text-sm font-medium rounded-lg transition-all duration-200 cursor-pointer',
+                  'min-w-[36px] sm:min-w-[40px] h-9 sm:h-10 px-2.5 sm:px-3 text-sm font-medium rounded-lg transition-all duration-200 cursor-pointer',
                   page === currentPage
                     ? 'bg-brand-600 text-white shadow-md shadow-brand-600/25'
                     : 'text-slate-600 hover:bg-slate-100 border border-transparent hover:border-slate-200'
@@ -159,9 +158,9 @@
             <button
               @click="goToPage(currentPage + 1)"
               :disabled="currentPage === totalPages"
-              class="flex items-center gap-1 px-4 py-2 text-sm font-medium text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
+              class="flex items-center gap-1 px-2 sm:px-4 py-2 text-sm font-medium text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
             >
-              下一页
+              <span class="hidden sm:inline">下一页</span>
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>
@@ -169,11 +168,15 @@
           </div>
 
           <!-- News Count -->
-          <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 text-sm">
+          <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 text-sm">
             <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
             </svg>
             <span class="font-medium">共 {{ totalNews }} 条</span>
+          </div>
+          <!-- News Count (mobile - compact) -->
+          <div class="sm:hidden flex items-center px-2 py-1 rounded-full bg-slate-100 text-slate-500 text-xs whitespace-nowrap">
+            <span class="font-medium">共{{ totalNews }}条</span>
           </div>
         </nav>
       </div>
