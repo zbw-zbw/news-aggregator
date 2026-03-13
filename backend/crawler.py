@@ -200,9 +200,9 @@ def run_crawler():
             total_skipped += skipped
             time.sleep(1)  # Be polite to servers
 
-    # Cleanup old news
+    # Cleanup old news (keep last 7 days)
     print("\n--- Cleaning up old news ---")
-    cleanup_old_news(30)
+    cleanup_old_news(7)
 
     print("\n" + "=" * 50)
     print(f"Crawler finished!")
