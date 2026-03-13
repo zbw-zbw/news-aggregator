@@ -8,12 +8,7 @@
     <!-- Category Tag -->
     <div class="flex items-center justify-between mb-2.5">
       <span
-        :class="[
-          'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
-          news.category === '程序员圈'
-            ? 'bg-blue-50 text-blue-700'
-            : 'bg-emerald-50 text-emerald-700'
-        ]"
+        :class="getCategoryClass(news.category)"
       >
         {{ news.category }}
       </span>
@@ -75,6 +70,27 @@ export default {
     }
   },
   setup() {
+    // Get category tag style based on category name
+    const getCategoryClass = (category) => {
+      const baseClass = 'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium'
+      
+      // Color mapping for different categories
+      const colorMap = {
+        '程序员圈': 'bg-blue-50 text-blue-700',
+        'AI圈': 'bg-emerald-50 text-emerald-700',
+        '前端圈': 'bg-orange-50 text-orange-700',
+        '后端圈': 'bg-indigo-50 text-indigo-700',
+        '云原生圈': 'bg-cyan-50 text-cyan-700',
+        '区块链圈': 'bg-purple-50 text-purple-700',
+        'AI+医疗圈': 'bg-rose-50 text-rose-700',
+        '技术视频': 'bg-red-50 text-red-700',
+        'AI研究': 'bg-teal-50 text-teal-700'
+      }
+      
+      const colorClass = colorMap[category] || 'bg-slate-50 text-slate-700'
+      return `${baseClass} ${colorClass}`
+    }
+
     // Format relative time
     const formatTime = (dateStr) => {
       if (!dateStr) return ''
@@ -117,6 +133,7 @@ export default {
     }
 
     return {
+      getCategoryClass,
       formatTime,
       formatScore
     }

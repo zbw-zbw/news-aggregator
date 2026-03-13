@@ -31,26 +31,39 @@
     <!-- ========== Controls Bar (Sticky) ========== -->
     <div class="bg-white border-b border-slate-200 sticky top-[56px] z-40">
       <div class="max-w-5xl mx-auto px-4 sm:px-6 py-3">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           <!-- Category Tabs -->
-          <div class="w-fit flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
-            <button
-              v-for="cat in categories"
-              :key="cat.value"
-              @click="switchCategory(cat.value)"
-              :class="[
-                'px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 cursor-pointer',
-                currentCategory === cat.value
-                  ? 'bg-white text-brand-600 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              ]"
+          <div class="relative w-fit max-w-full">
+            <!-- Left fade indicator -->
+            <div class="absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none opacity-0 transition-opacity duration-200" ref="leftFade"></div>
+            <!-- Right fade indicator -->
+            <div class="absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" ref="rightFade"></div>
+            <!-- Scrollable tabs with background -->
+            <div 
+              class="overflow-x-auto scrollbar-hide p-1 bg-slate-100 rounded-lg" 
+              ref="categoryScroll"
+              @scroll="handleCategoryScroll"
             >
-              {{ cat.label }}
-            </button>
+              <div class="flex items-center gap-1 whitespace-nowrap">
+                <button
+                  v-for="cat in categories"
+                  :key="cat.value"
+                  @click="switchCategory(cat.value, $event)"
+                  :class="[
+                    'px-3 sm:px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 cursor-pointer flex-shrink-0',
+                    currentCategory === cat.value
+                      ? 'bg-white text-brand-600 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  ]"
+                >
+                  {{ cat.label }}
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Sort Toggle -->
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 flex-shrink-0">
             <div class="flex items-center bg-slate-100 rounded-lg p-0.5">
               <button
                 v-for="sort in sortOptions"
@@ -120,63 +133,139 @@
 
     <!-- ========== Bottom Bar (Pagination + Copyright, Sticky at bottom) ========== -->
     <div class="bg-white/95">
-      <!-- Pagination (only show when multiple pages) -->
-      <div v-if="!loading && !error && totalPages > 1" class="max-w-5xl mx-auto px-4 sm:px-6 py-4">
-        <nav class="flex items-center justify-center gap-2 sm:gap-4" aria-label="分页导航">
-          <!-- Pagination Row -->
-          <div class="flex items-center gap-1.5 sm:gap-3">
+      <!-- Pagination (always show when has data) -->
+      <div v-if="!loading && !error && totalNews > 0" class="max-w-5xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
+        <nav class="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4" aria-label="分页导航">
+          <!-- Pagination Controls -->
+          <div class="flex items-center gap-1 sm:gap-1.5">
             <!-- Previous Button -->
             <button
               @click="goToPage(currentPage - 1)"
               :disabled="currentPage === 1"
-              class="flex items-center gap-1 px-2 sm:px-4 py-2 text-sm font-medium text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
+              class="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 text-sm font-medium text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
               </svg>
-              <span class="hidden sm:inline">上一页</span>
+            </button>
+
+            <!-- First Page -->
+            <button
+              v-if="showFirstPage"
+              @click="goToPage(1)"
+              :class="[
+                'flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 text-sm font-medium rounded-lg transition-all duration-200 cursor-pointer',
+                1 === currentPage
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:bg-slate-100'
+              ]"
+            >
+              1
+            </button>
+
+            <!-- Left Ellipsis -->
+            <button
+              v-if="showLeftEllipsis"
+              @click="goToPage(Math.max(1, currentPage - 5))"
+              class="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 text-sm font-medium text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-all duration-200 cursor-pointer"
+              title="向前5页"
+            >
+              <span class="hidden sm:inline">•••</span>
+              <span class="sm:hidden">•</span>
             </button>
 
             <!-- Page Numbers -->
-            <div class="flex items-center gap-1 sm:gap-2">
-              <button
-                v-for="page in visiblePages"
-                :key="page"
-                @click="goToPage(page)"
-                :class="[
-                  'min-w-[36px] sm:min-w-[40px] h-9 sm:h-10 px-2.5 sm:px-3 text-sm font-medium rounded-lg transition-all duration-200 cursor-pointer',
-                  page === currentPage
-                    ? 'bg-brand-600 text-white shadow-md shadow-brand-600/25'
-                    : 'text-slate-600 hover:bg-slate-100 border border-transparent hover:border-slate-200'
-                ]"
-              >
-                {{ page }}
-              </button>
-            </div>
+            <button
+              v-for="page in visiblePages"
+              :key="page"
+              @click="goToPage(page)"
+              :class="[
+                'flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 text-sm font-medium rounded-lg transition-all duration-200 cursor-pointer',
+                page === currentPage
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:bg-slate-100'
+              ]"
+            >
+              {{ page }}
+            </button>
+
+            <!-- Right Ellipsis -->
+            <button
+              v-if="showRightEllipsis"
+              @click="goToPage(Math.min(totalPages, currentPage + 5))"
+              class="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 text-sm font-medium text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-all duration-200 cursor-pointer"
+              title="向后5页"
+            >
+              <span class="hidden sm:inline">•••</span>
+              <span class="sm:hidden">•</span>
+            </button>
+
+            <!-- Last Page -->
+            <button
+              v-if="showLastPage"
+              @click="goToPage(totalPages)"
+              :class="[
+                'flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 text-sm font-medium rounded-lg transition-all duration-200 cursor-pointer',
+                totalPages === currentPage
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:bg-slate-100'
+              ]"
+            >
+              {{ totalPages }}
+            </button>
 
             <!-- Next Button -->
             <button
               @click="goToPage(currentPage + 1)"
               :disabled="currentPage === totalPages"
-              class="flex items-center gap-1 px-2 sm:px-4 py-2 text-sm font-medium text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
+              class="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 text-sm font-medium text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
             >
-              <span class="hidden sm:inline">下一页</span>
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>
             </button>
           </div>
 
-          <!-- News Count -->
-          <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 text-sm">
-            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-            </svg>
-            <span class="font-medium">共 {{ totalNews }} 条</span>
-          </div>
-          <!-- News Count (mobile - compact) -->
-          <div class="sm:hidden flex items-center px-2 py-1 rounded-full bg-slate-100 text-slate-500 text-xs whitespace-nowrap">
-            <span class="font-medium">共{{ totalNews }}条</span>
+          <!-- Page Size Selector, Jump Input & Total Count -->
+          <div class="flex items-center gap-2 sm:gap-3">
+            <!-- Page Size Selector -->
+            <div class="flex items-center gap-1 text-xs sm:text-sm text-slate-600">
+              <span class="hidden sm:inline">每页</span>
+              <select
+                :value="pageSize"
+                @change="handlePageSizeChange($event)"
+                class="h-7 sm:h-8 px-1.5 sm:px-2 text-xs sm:text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 cursor-pointer"
+              >
+                <option :value="10">10</option>
+                <option :value="20">20</option>
+                <option :value="50">50</option>
+                <option :value="100">100</option>
+              </select>
+              <span class="hidden sm:inline">条</span>
+            </div>
+
+            <!-- Jump to Page Input -->
+            <div class="hidden md:flex items-center gap-1 text-xs sm:text-sm text-slate-600">
+              <span>跳至</span>
+              <input
+                v-model.number="jumpPageInput"
+                @keyup.enter="handleJumpPage"
+                type="number"
+                min="1"
+                :max="totalPages"
+                class="w-10 sm:w-12 h-7 sm:h-8 px-1 text-xs sm:text-sm font-medium text-center text-slate-700 bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
+                placeholder=""
+              />
+              <span>页</span>
+            </div>
+
+            <!-- Total Count Badge -->
+            <div class="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 text-xs sm:text-sm">
+              <svg class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+              </svg>
+              <span class="font-medium">共 {{ totalNews }} 条</span>
+            </div>
           </div>
         </nav>
       </div>
@@ -208,11 +297,8 @@ export default {
     SkeletonCard
   },
   setup() {
-    // Category options
-    const categories = [
-      { value: '程序员圈', label: '程序员圈' },
-      { value: 'AI圈', label: 'AI圈' }
-    ]
+    // Category options (will be fetched from API)
+    const categories = ref([])
     
     // Sort options
     const sortOptions = [
@@ -221,14 +307,21 @@ export default {
     ]
     
     // State
-    const currentCategory = ref('程序员圈')
+    const currentCategory = ref('')
     const currentSort = ref('newest')
     const currentPage = ref(1)
+    const pageSize = ref(20)
     const totalPages = ref(1)
     const totalNews = ref(0)
     const newsItems = ref([])
     const loading = ref(false)
     const error = ref(null)
+    const jumpPageInput = ref('')
+    
+    // Refs for category scroll
+    const categoryScroll = ref(null)
+    const leftFade = ref(null)
+    const rightFade = ref(null)
 
     // API base URL
     const API_BASE = import.meta.env.VITE_API_BASE || ''
@@ -246,21 +339,53 @@ export default {
       return `${dateStr}`
     })
 
-    // Visible page numbers for pagination
+    // Show first page button
+    const showFirstPage = computed(() => {
+      return totalPages.value > 1 && visiblePages.value[0] > 1
+    })
+
+    // Show last page button
+    const showLastPage = computed(() => {
+      return totalPages.value > 1 && visiblePages.value[visiblePages.value.length - 1] < totalPages.value
+    })
+
+    // Show left ellipsis
+    const showLeftEllipsis = computed(() => {
+      return visiblePages.value[0] > 2
+    })
+
+    // Show right ellipsis
+    const showRightEllipsis = computed(() => {
+      return visiblePages.value[visiblePages.value.length - 1] < totalPages.value - 1
+    })
+
+    // Visible page numbers for pagination (Ant Design style)
+    // Shows max 3 pages in the middle: 1 ... 3 4 5 ... 10
     const visiblePages = computed(() => {
       const pages = []
       const total = totalPages.value
       const current = currentPage.value
+      const maxVisible = 3 // Show at most 3 page numbers in the middle
       
-      let start = Math.max(1, current - 2)
-      let end = Math.min(total, current + 2)
+      // If total pages is small (<= 5), show all
+      if (total <= 5) {
+        for (let i = 1; i <= total; i++) {
+          pages.push(i)
+        }
+        return pages
+      }
       
-      // Adjust range to show 5 pages if possible
-      if (end - start < 4) {
-        if (start === 1) {
-          end = Math.min(total, start + 4)
+      // For larger page counts, show: 1 ... [current-1, current, current+1] ... total
+      // Calculate middle range (excluding first and last page)
+      let start = Math.max(2, current - 1)
+      let end = Math.min(total - 1, current + 1)
+      
+      // Adjust to show maxVisible pages
+      if (end - start + 1 < maxVisible) {
+        if (start === 2) {
+          end = Math.min(total - 1, start + maxVisible - 1)
         } else {
-          start = Math.max(1, end - 4)
+          start = Math.max(2, end - maxVisible + 1)
         }
       }
       
@@ -280,7 +405,8 @@ export default {
         const params = new URLSearchParams({
           category: currentCategory.value,
           sort: currentSort.value,
-          page: currentPage.value
+          page: currentPage.value,
+          per_page: pageSize.value
         })
 
         const response = await fetch(`${API_BASE}/api/news?${params}`)
@@ -299,10 +425,25 @@ export default {
     }
 
     // Switch category and reset to page 1
-    const switchCategory = (cat) => {
+    const switchCategory = (cat, event) => {
       if (currentCategory.value !== cat) {
         currentCategory.value = cat
         currentPage.value = 1
+      }
+      
+      // Scroll clicked button into view
+      if (event && event.target) {
+        const button = event.target
+        const scrollContainer = categoryScroll.value
+        if (scrollContainer) {
+          const buttonRect = button.getBoundingClientRect()
+          const containerRect = scrollContainer.getBoundingClientRect()
+          
+          // Check if button is outside the visible area
+          if (buttonRect.left < containerRect.left || buttonRect.right > containerRect.right) {
+            button.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+          }
+        }
       }
     }
 
@@ -322,14 +463,77 @@ export default {
       }
     }
 
-    // Watch for changes and refetch
+    // Handle page size change - reset to page 1 and fetch
+    const handlePageSizeChange = (event) => {
+      // Update pageSize from the select event
+      pageSize.value = parseInt(event.target.value)
+      // Force page reset and fetch
+      currentPage.value = 1
+      // Use nextTick to ensure the DOM updates before fetching
+      setTimeout(() => {
+        fetchNews()
+      }, 0)
+    }
+
+    // Handle jump to page
+    const handleJumpPage = () => {
+      const page = parseInt(jumpPageInput.value)
+      if (page && page >= 1 && page <= totalPages.value) {
+        goToPage(page)
+        jumpPageInput.value = ''
+      }
+    }
+
+    // Handle category scroll to show/hide fade indicators
+    const handleCategoryScroll = () => {
+      if (!categoryScroll.value || !leftFade.value || !rightFade.value) return
+      
+      const { scrollLeft, scrollWidth, clientWidth } = categoryScroll.value
+      const isScrollable = scrollWidth > clientWidth
+      
+      // Show left fade if scrolled right
+      leftFade.value.style.opacity = scrollLeft > 0 ? '1' : '0'
+      
+      // Show right fade if not scrolled to end
+      const isAtEnd = scrollLeft >= scrollWidth - clientWidth - 1
+      rightFade.value.style.opacity = isScrollable && !isAtEnd ? '1' : '0'
+    }
+
+    // Watch for changes and refetch (excluding pageSize which is handled manually)
     watch([currentCategory, currentSort, currentPage], () => {
       fetchNews()
     })
 
+    // Fetch categories from API
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/categories`)
+        if (!response.ok) throw new Error('Failed to fetch categories')
+        
+        const data = await response.json()
+        // Transform to { value, label } format
+        categories.value = data.map(cat => ({ value: cat, label: cat }))
+        
+        // Set default category if current one is not in the list
+        if (categories.value.length > 0 && !categories.value.find(c => c.value === currentCategory.value)) {
+          currentCategory.value = categories.value[0].value
+        }
+        
+        // Update scroll fade indicators after categories load
+        setTimeout(handleCategoryScroll, 100)
+      } catch (err) {
+        console.error('Error fetching categories:', err)
+        // Fallback categories - empty array, will show loading state
+        categories.value = []
+      }
+    }
+
     // Initial fetch
     onMounted(() => {
+      fetchCategories()
       fetchNews()
+      // Update fade indicators on window resize
+      window.addEventListener('resize', handleCategoryScroll)
     })
 
     return {
@@ -338,14 +542,27 @@ export default {
       currentCategory,
       currentSort,
       currentPage,
+      pageSize,
       totalPages,
       totalNews,
       visiblePages,
+      showFirstPage,
+      showLastPage,
+      showLeftEllipsis,
+      showRightEllipsis,
       newsItems,
       loading,
       error,
       currentDate,
+      jumpPageInput,
+      categoryScroll,
+      leftFade,
+      rightFade,
       fetchNews,
+      fetchCategories,
+      handleCategoryScroll,
+      handlePageSizeChange,
+      handleJumpPage,
       switchCategory,
       switchSort,
       goToPage
@@ -353,3 +570,16 @@ export default {
   }
 }
 </script>
+
+<style>
+/* Hide scrollbar for Chrome, Safari and Opera */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+</style>

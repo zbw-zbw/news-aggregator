@@ -23,14 +23,18 @@ def get_news():
     """
     Get paginated news list.
     Query params:
-        - category: '程序员圈' or 'AI圈' (optional)
+        - category: category name from /api/categories (optional)
         - sort: 'newest' or 'hottest' (default: newest)
         - page: page number (default: 1)
+        - per_page: items per page (default: 20, max: 100)
     """
     category = request.args.get('category')
     sort = request.args.get('sort', 'newest')
     page = request.args.get('page', 1, type=int)
-    per_page = 20
+    per_page = request.args.get('per_page', 20, type=int)
+    
+    # Limit per_page to reasonable range
+    per_page = max(1, min(per_page, 100))
 
     # Build query
     query = News.query
@@ -64,8 +68,12 @@ def get_news_detail(news_id):
 
 @app.route('/api/categories', methods=['GET'])
 def get_categories():
-    """Get all available categories."""
-    return jsonify(['程序员圈', 'AI圈'])
+    """Get all available categories from database."""
+    from sqlalchemy import func
+    categories = db.session.query(News.category).distinct().all()
+    # Filter out None values and flatten the result
+    category_list = [cat[0] for cat in categories if cat[0]]
+    return jsonify(category_list)
 
 
 @app.route('/api/health', methods=['GET'])
