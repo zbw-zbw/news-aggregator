@@ -72,7 +72,7 @@
     </div>
 
     <!-- ========== Main Content (flex-grow to push footer down) ========== -->
-    <main class="flex-grow max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-36 w-full">
+    <main class="flex-grow max-w-5xl mx-auto px-4 sm:px-6 py-6 w-full">
       <!-- Loading State - Skeleton Cards -->
       <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <SkeletonCard v-for="i in 6" :key="i" />
@@ -119,7 +119,7 @@
     </main>
 
     <!-- ========== Bottom Bar (Pagination + Copyright, Sticky at bottom) ========== -->
-    <div class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-slate-200 z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+    <div class="bg-white/95">
       <!-- Pagination (only show when multiple pages) -->
       <div v-if="!loading && !error && totalPages > 1" class="max-w-5xl mx-auto px-4 sm:px-6 py-4">
         <nav class="flex items-center justify-center gap-2 sm:gap-4" aria-label="分页导航">
