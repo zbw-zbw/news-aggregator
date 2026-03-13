@@ -15,7 +15,7 @@
             <div class="flex items-center gap-2">
               <h1 class="text-lg font-bold text-slate-900">极客热榜</h1>
               <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand-100 text-brand-700">
-                每日更新
+                每小时更新
               </span>
             </div>
           </div>
