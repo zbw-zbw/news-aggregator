@@ -315,7 +315,7 @@ export default {
     const totalPages = ref(1)
     const totalNews = ref(0)
     const newsItems = ref([])
-    const loading = ref(false)
+    const loading = ref(true)
     const error = ref(null)
     const jumpPageInput = ref('')
     
