@@ -230,7 +230,7 @@
           <div class="flex items-center gap-2 sm:gap-3">
             <!-- Page Size Selector -->
             <div class="flex items-center gap-1 text-xs sm:text-sm text-slate-600">
-              <span class="hidden sm:inline">每页</span>
+              <span>每页</span>
               <select
                 :value="pageSize"
                 @change="handlePageSizeChange($event)"
@@ -241,7 +241,7 @@
                 <option :value="50">50</option>
                 <option :value="100">100</option>
               </select>
-              <span class="hidden sm:inline">条</span>
+              <span>条</span>
             </div>
 
             <!-- Jump to Page Input -->
@@ -532,8 +532,9 @@ export default {
     // Initial fetch
     onMounted(() => {
       inject()
+      // Fetch categories first, then the watcher will trigger fetchNews
+      // after the first category is set (avoiding fetching all data)
       fetchCategories()
-      fetchNews()
       // Update fade indicators on window resize
       window.addEventListener('resize', handleCategoryScroll)
     })

@@ -5,13 +5,25 @@
     rel="noopener noreferrer"
     class="flex flex-col bg-white rounded-xl border border-slate-200 p-4 transition-all duration-200 cursor-pointer hover:border-brand-300 hover:shadow-md group h-full"
   >
-    <!-- Category Tag -->
+    <!-- Category Tag & Video Badge -->
     <div class="flex items-center justify-between mb-2.5">
-      <span
-        :class="getCategoryClass(news.category)"
-      >
-        {{ news.category }}
-      </span>
+      <div class="flex items-center gap-1.5">
+        <span
+          :class="getCategoryClass(news.category)"
+        >
+          {{ news.category }}
+        </span>
+        <!-- Video Badge -->
+        <span
+          v-if="news.is_video"
+          class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-red-50 text-red-600"
+        >
+          <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+          </svg>
+          <span>视频</span>
+        </span>
+      </div>
 
       <!-- Hot Score (shown in hottest sort mode) -->
       <div
@@ -74,8 +86,15 @@ export default {
     const getCategoryClass = (category) => {
       const baseClass = 'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium'
       
-      // Color mapping for different categories
+      // Color mapping for different categories (new 6-category system)
       const colorMap = {
+        '前端': 'bg-orange-50 text-orange-700',
+        '后端': 'bg-indigo-50 text-indigo-700',
+        '云原生': 'bg-cyan-50 text-cyan-700',
+        '人工智能': 'bg-emerald-50 text-emerald-700',
+        '区块链': 'bg-purple-50 text-purple-700',
+        '其他技术': 'bg-slate-50 text-slate-700',
+        // Legacy category mappings for backward compatibility during migration
         '程序员圈': 'bg-blue-50 text-blue-700',
         'AI圈': 'bg-emerald-50 text-emerald-700',
         '前端圈': 'bg-orange-50 text-orange-700',

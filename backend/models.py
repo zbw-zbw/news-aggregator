@@ -19,6 +19,7 @@ class News(db.Model):
     source = db.Column(db.Text)
     category = db.Column(db.Text)
     hot_score = db.Column(db.Float, default=0.0)
+    is_video = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def to_dict(self):
@@ -31,7 +32,8 @@ class News(db.Model):
             'source': self.source,
             'published': self.published.isoformat() if self.published else None,
             'category': self.category,
-            'hot_score': self.hot_score
+            'hot_score': self.hot_score,
+            'is_video': self.is_video
         }
 
     def __repr__(self):

@@ -66,13 +66,27 @@ def get_news_detail(news_id):
     return jsonify(news.to_dict())
 
 
+# Category order - must match the defined 6-category system
+CATEGORY_ORDER = ['前端', '后端', '云原生', '人工智能', '区块链', '其他技术']
+
+
 @app.route('/api/categories', methods=['GET'])
 def get_categories():
-    """Get all available categories from database."""
+    """Get all available categories in predefined order."""
     from sqlalchemy import func
     categories = db.session.query(News.category).distinct().all()
     # Filter out None values and flatten the result
     category_list = [cat[0] for cat in categories if cat[0]]
+    
+    # Sort categories by predefined order
+    def get_order(cat):
+        try:
+            return CATEGORY_ORDER.index(cat)
+        except ValueError:
+            # Unknown categories go at the end
+            return len(CATEGORY_ORDER)
+    
+    category_list.sort(key=get_order)
     return jsonify(category_list)
 
 

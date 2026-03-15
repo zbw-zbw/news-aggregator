@@ -29,10 +29,21 @@ news-aggregator/
 
 ### Backend
 
+**Linux/macOS:**
 ```bash
 cd backend
-python3 -m venv venv 2>/dev/null || true
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python app.py             # Start API server
+python crawler.py         # Run crawler manually
+```
+
+**Windows PowerShell:**
+```powershell
+cd backend
+python -m venv venv
+.\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 python app.py             # Start API server
 python crawler.py         # Run crawler manually
@@ -40,7 +51,15 @@ python crawler.py         # Run crawler manually
 
 ### Frontend
 
+**Linux/macOS:**
 ```bash
+cd frontend
+npm install
+npm run dev
+```
+
+**Windows PowerShell:**
+```powershell
 cd frontend
 npm install
 npm run dev
