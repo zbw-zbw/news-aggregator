@@ -34,6 +34,11 @@ jobs:
           cd backend
           python crawler.py
 
+      - name: Recategorize misc news
+        run: |
+          cd backend
+          echo "yes" | python recategorize_all.py --misc-only
+
       - name: Commit database changes
         run: |
           git config user.name "github-actions[bot]"

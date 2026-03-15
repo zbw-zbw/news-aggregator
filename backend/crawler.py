@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from dateutil import parser as date_parser
 from models import db, News
 from app import app
+from category_classifier import get_category_for_article
 import time
 
 # RSS Sources configuration - 6 mutually exclusive categories
@@ -47,7 +48,7 @@ RSS_SOURCES = {
         {'url': 'https://istio.io/latest/blog/feed.xml', 'name': 'Istio Blog', 'weight': 1.0},
         {'url': 'https://prometheus.io/blog/feed.xml', 'name': 'Prometheus Blog', 'weight': 1.0},
     ],
-    '人工智能': [
+    'AI': [
         {'url': 'https://openai.com/blog/rss.xml', 'name': 'OpenAI Blog', 'weight': 1.3},
         {'url': 'https://blog.google/technology/ai/rss/', 'name': 'Google AI Blog', 'weight': 1.2},
         {'url': 'https://deepmind.google/discover/blog/rss/', 'name': 'DeepMind Blog', 'weight': 1.2},
@@ -75,7 +76,7 @@ RSS_SOURCES = {
         {'url': 'https://www.coindesk.com/arc/outboundfeeds/rss/', 'name': 'CoinDesk', 'weight': 1.1},
         {'url': 'https://bihu.com/rss/newest', 'name': '币乎', 'weight': 1.0},
     ],
-    '其他技术': [
+    '其他': [
         {'url': 'https://news.ycombinator.com/rss', 'name': 'Hacker News', 'weight': 1.2},
         {'url': 'https://www.reddit.com/r/programming/.rss', 'name': 'Reddit r/programming', 'weight': 1.0},
         {'url': 'https://www.oschina.net/news/rss', 'name': '开源中国', 'weight': 1.0},
@@ -90,10 +91,10 @@ YOUTUBE_SOURCES = {
     '前端': [
         {'url': 'https://www.youtube.com/feeds/videos.xml?channel_id=UC4EKAvw7CZfBPh4a6VlB0zw', 'name': 'Fireship', 'weight': 1.1},  # General frontend content
     ],
-    '人工智能': [
+    'AI': [
         {'url': 'https://www.youtube.com/feeds/videos.xml?channel_id=UCYO_jab_esuFRV4b17AJtAw', 'name': '3Blue1Brown', 'weight': 1.0},  # Math/ML visualizations
     ],
-    '其他技术': [
+    '其他': [
         {'url': 'https://www.youtube.com/feeds/videos.xml?channel_id=UCjfH9h4NpdqH3A-7kY6hRfA', 'name': '尚硅谷', 'weight': 1.0},
         {'url': 'https://www.youtube.com/feeds/videos.xml?channel_id=UC8tz_v5p4j5pWmB6JwF8n7Q', 'name': '黑马程序员', 'weight': 1.0},
         {'url': 'https://www.youtube.com/feeds/videos.xml?channel_id=UC4JX40jDee_tINbkjycV4Sg', 'name': 'Tech With Tim', 'weight': 1.0},
@@ -101,8 +102,8 @@ YOUTUBE_SOURCES = {
     ],
 }
 
-# arXiv RSS Sources merged into 人工智能 category
-ARXIV_SOURCES = {}  # Empty - all arXiv sources moved to 人工智能 category above
+# arXiv RSS Sources merged into AI category
+ARXIV_SOURCES = {}  # Empty - all arXiv sources moved to AI category above
 
 # User agent for requests
 HEADERS = {
@@ -180,6 +181,11 @@ def fetch_rss_feed(url, source_name, category, weight, is_video=False):
 
                 published_date = parse_date(entry)
                 hot_score = calculate_hot_score(published_date, weight)
+                
+                # Use dynamic classification for mixed sources
+                final_category = get_category_for_article(title, source_name, category)
+                if final_category != category:
+                    print(f"    Reclassified: '{title[:50]}...' -> {final_category}")
 
                 articles.append({
                     'title': title,
@@ -187,7 +193,7 @@ def fetch_rss_feed(url, source_name, category, weight, is_video=False):
                     'summary': truncate_summary(summary),
                     'published': published_date,
                     'source': source_name,
-                    'category': category,
+                    'category': final_category,
                     'hot_score': hot_score,
                     'is_video': is_video
                 })

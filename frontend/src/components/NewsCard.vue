@@ -87,13 +87,14 @@ export default {
       const baseClass = 'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium'
       
       // Color mapping for different categories (new 6-category system)
+      // Colors chosen for maximum distinctiveness
       const colorMap = {
-        '前端': 'bg-orange-50 text-orange-700',
-        '后端': 'bg-indigo-50 text-indigo-700',
-        '云原生': 'bg-cyan-50 text-cyan-700',
-        '人工智能': 'bg-emerald-50 text-emerald-700',
-        '区块链': 'bg-purple-50 text-purple-700',
-        '其他技术': 'bg-slate-50 text-slate-700',
+        '前端': 'bg-orange-50 text-orange-700',      // Orange - warm
+        '后端': 'bg-blue-50 text-blue-700',          // Blue - cool
+        '云原生': 'bg-sky-50 text-sky-600',          // Sky blue - lighter blue
+        'AI': 'bg-amber-50 text-amber-700',          // Amber gold - warm, distinct from red video badge
+        '区块链': 'bg-violet-50 text-violet-700',    // Violet purple
+        '其他': 'bg-gray-50 text-gray-600',          // Gray - neutral
         // Legacy category mappings for backward compatibility during migration
         '程序员圈': 'bg-blue-50 text-blue-700',
         'AI圈': 'bg-emerald-50 text-emerald-700',

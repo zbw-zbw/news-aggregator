@@ -85,7 +85,8 @@ def get_news_detail(news_id):
 
 
 # Category order - must match the defined 6-category system
-CATEGORY_ORDER = ['前端', '后端', '云原生', '人工智能', '区块链', '其他技术']
+# Order: All (empty), AI, Frontend, Backend, Cloud Native, Blockchain, Other
+CATEGORY_ORDER = ['', 'AI', '前端', '后端', '云原生', '区块链', '其他']
 
 
 @app.route('/api/categories', methods=['GET'])

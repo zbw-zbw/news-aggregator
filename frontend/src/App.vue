@@ -505,6 +505,12 @@ export default {
       fetchNews()
     })
 
+    // Category display names mapping
+    const categoryLabels = {
+      '': '全部',
+      '其他': '其他'
+    }
+    
     // Fetch categories from API
     const fetchCategories = async () => {
       try {
@@ -512,29 +518,48 @@ export default {
         if (!response.ok) throw new Error('Failed to fetch categories')
         
         const data = await response.json()
-        // Transform to { value, label } format
-        categories.value = data.map(cat => ({ value: cat, label: cat }))
+        // API returns array of category names, add "All" at the beginning
+        const allCategories = ['', ...data.filter(c => c !== '')]
         
-        // Set default category if current one is not in the list
-        if (categories.value.length > 0 && !categories.value.find(c => c.value === currentCategory.value)) {
-          currentCategory.value = categories.value[0].value
-        }
+        // Transform to { value, label } format
+        categories.value = allCategories.map(cat => ({
+          value: cat,
+          label: categoryLabels[cat] || cat
+        }))
         
         // Update scroll fade indicators after categories load
         setTimeout(handleCategoryScroll, 100)
       } catch (err) {
         console.error('Error fetching categories:', err)
-        // Fallback categories - empty array, will show loading state
-        categories.value = []
+        // Fallback categories with "All" option
+        categories.value = [
+          { value: '', label: '全部' },
+          { value: 'AI', label: 'AI' },
+          { value: '前端', label: '前端' },
+          { value: '后端', label: '后端' },
+          { value: '云原生', label: '云原生' },
+          { value: '区块链', label: '区块链' },
+          { value: '其他', label: '其他' }
+        ]
+      }
+      
+      // Ensure current category is valid after loading categories
+      const validValues = categories.value.map(c => c.value)
+      if (!validValues.includes(currentCategory.value)) {
+        currentCategory.value = '' // Default to "All"
       }
     }
 
     // Initial fetch
     onMounted(() => {
       inject()
-      // Fetch categories first, then the watcher will trigger fetchNews
-      // after the first category is set (avoiding fetching all data)
-      fetchCategories()
+      // Fetch categories first, then fetch news
+      // We need to fetch categories to know the order, but 'All' (empty) is always valid
+      fetchCategories().then(() => {
+        // Always fetch news after categories are loaded
+        // This ensures news load on first visit even if default category is already 'All'
+        fetchNews()
+      })
       // Update fade indicators on window resize
       window.addEventListener('resize', handleCategoryScroll)
     })
