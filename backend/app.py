@@ -18,6 +18,24 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 
+# Create indexes on app startup
+with app.app_context():
+    from sqlalchemy import text
+    indexes = [
+        'CREATE INDEX IF NOT EXISTS idx_news_category ON news (category)',
+        'CREATE INDEX IF NOT EXISTS idx_news_published ON news (published)',
+        'CREATE INDEX IF NOT EXISTS idx_news_hot_score ON news (hot_score)',
+        'CREATE INDEX IF NOT EXISTS idx_category_published ON news (category, published)',
+        'CREATE INDEX IF NOT EXISTS idx_category_hot_score ON news (category, hot_score)',
+    ]
+    for idx_sql in indexes:
+        try:
+            db.session.execute(text(idx_sql))
+        except Exception:
+            pass
+    db.session.commit()
+
+
 @app.route('/api/news', methods=['GET'])
 def get_news():
     """
@@ -97,10 +115,26 @@ def health_check():
 
 
 def init_db():
-    """Initialize the database."""
+    """Initialize the database and create indexes."""
     with app.app_context():
         db.create_all()
-        print("Database initialized.")
+        
+        # Create indexes for performance (SQLite doesn't auto-add indexes to existing tables)
+        from sqlalchemy import text
+        indexes = [
+            'CREATE INDEX IF NOT EXISTS idx_news_category ON news (category)',
+            'CREATE INDEX IF NOT EXISTS idx_news_published ON news (published)',
+            'CREATE INDEX IF NOT EXISTS idx_news_hot_score ON news (hot_score)',
+            'CREATE INDEX IF NOT EXISTS idx_category_published ON news (category, published)',
+            'CREATE INDEX IF NOT EXISTS idx_category_hot_score ON news (category, hot_score)',
+        ]
+        for idx_sql in indexes:
+            try:
+                db.session.execute(text(idx_sql))
+            except Exception as e:
+                print(f"Index creation warning: {e}")
+        db.session.commit()
+        print("Database initialized with indexes.")
 
 
 if __name__ == '__main__':

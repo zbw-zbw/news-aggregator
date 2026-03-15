@@ -15,12 +15,18 @@ class News(db.Model):
     title = db.Column(db.Text, nullable=False)
     summary = db.Column(db.Text)
     link = db.Column(db.Text, unique=True, nullable=False)
-    published = db.Column(db.DateTime)
+    published = db.Column(db.DateTime, index=True)
     source = db.Column(db.Text)
-    category = db.Column(db.Text)
-    hot_score = db.Column(db.Float, default=0.0)
+    category = db.Column(db.Text, index=True)
+    hot_score = db.Column(db.Float, default=0.0, index=True)
     is_video = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Composite indexes for common query patterns
+    __table_args__ = (
+        db.Index('idx_category_published', 'category', 'published'),
+        db.Index('idx_category_hot_score', 'category', 'hot_score'),
+    )
 
     def to_dict(self):
         """Convert model to dictionary for JSON serialization."""

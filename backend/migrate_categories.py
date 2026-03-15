@@ -4,6 +4,8 @@ Database migration script for category refactoring.
 Migrates from old categories to new 6-category system:
 - 前端, 后端, 云原生, 人工智能, 区块链, 其他技术
 
+Also creates necessary indexes for performance.
+
 Run this script once after updating the code.
 """
 import sqlite3
@@ -14,6 +16,43 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 DATABASE_PATH = os.path.join(BASE_DIR, 'news.db')
 
 
+def get_existing_indexes(cursor):
+    """Get list of existing indexes on the news table."""
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='news'")
+    return [row[0] for row in cursor.fetchall()]
+
+
+def create_indexes(conn, cursor):
+    """Create necessary indexes if they don't exist."""
+    print("\n[Step 0] Creating database indexes...")
+    
+    existing_indexes = get_existing_indexes(cursor)
+    
+    indexes_to_create = [
+        ('idx_news_category', 'CREATE INDEX idx_news_category ON news (category)'),
+        ('idx_news_published', 'CREATE INDEX idx_news_published ON news (published)'),
+        ('idx_news_hot_score', 'CREATE INDEX idx_news_hot_score ON news (hot_score)'),
+        ('idx_category_published', 'CREATE INDEX idx_category_published ON news (category, published)'),
+        ('idx_category_hot_score', 'CREATE INDEX idx_category_hot_score ON news (category, hot_score)'),
+    ]
+    
+    created = 0
+    for idx_name, idx_sql in indexes_to_create:
+        if idx_name not in existing_indexes:
+            try:
+                cursor.execute(idx_sql)
+                print(f"  ✓ Created index: {idx_name}")
+                created += 1
+            except sqlite3.OperationalError as e:
+                print(f"  ⚠ Failed to create index {idx_name}: {e}")
+        else:
+            print(f"  ✓ Index already exists: {idx_name}")
+    
+    if created > 0:
+        conn.commit()
+        print(f"  Created {created} new indexes")
+
+
 def migrate_database():
     """Run the database migration."""
     print("=" * 50)
@@ -22,6 +61,9 @@ def migrate_database():
     
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
+    
+    # Step 0: Create indexes first (critical for performance)
+    create_indexes(conn, cursor)
     
     # Step 1: Check if is_video column exists, add if not
     print("\n[Step 1] Checking is_video column...")
