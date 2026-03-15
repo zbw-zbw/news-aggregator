@@ -24,6 +24,10 @@ RSS_SOURCES = {
         {'url': 'https://css-tricks.com/feed/', 'name': 'CSS Tricks', 'weight': 1.0},
         {'url': 'https://frontendfoc.us/rss/', 'name': 'Frontend Focus', 'weight': 1.1},
         {'url': 'http://www.alloyteam.com/feed/', 'name': '腾讯 AlloyTeam', 'weight': 1.0},
+        # New Frontend sources
+        {'url': 'https://www.smashingmagazine.com/feed/', 'name': 'Smashing Magazine', 'weight': 1.2},
+        {'url': 'https://dev.to/feed/tag/frontend', 'name': 'Dev.to Frontend', 'weight': 1.0},
+        {'url': 'https://developer.chrome.com/feeds/blog.xml', 'name': 'Chrome Developers', 'weight': 1.1},
     ],
     '后端': [
         {'url': 'https://tech.meituan.com/feed/', 'name': '美团技术团队', 'weight': 1.2},
@@ -36,6 +40,9 @@ RSS_SOURCES = {
         {'url': 'https://studygolang.com/rss', 'name': 'Go 语言中文网', 'weight': 1.0},
         {'url': 'https://blog.rust-lang.org/feed.xml', 'name': 'Rust 官方博客', 'weight': 1.1},
         {'url': 'https://devblogs.microsoft.com/dotnet/feed/', 'name': 'Microsoft .NET Blog', 'weight': 1.1},
+        # New Backend sources
+        {'url': 'https://martinfowler.com/feed.atom', 'name': 'Martin Fowler Blog', 'weight': 1.3},
+        {'url': 'https://aws.amazon.com/blogs/architecture/feed/', 'name': 'AWS Architecture Blog', 'weight': 1.1},
     ],
     '云原生': [
         {'url': 'https://kubernetes.io/feed.xml', 'name': 'Kubernetes Blog', 'weight': 1.2},
@@ -47,6 +54,8 @@ RSS_SOURCES = {
         {'url': 'https://www.openshift.com/blog/feed', 'name': 'OpenShift Blog', 'weight': 1.0},
         {'url': 'https://istio.io/latest/blog/feed.xml', 'name': 'Istio Blog', 'weight': 1.0},
         {'url': 'https://prometheus.io/blog/feed.xml', 'name': 'Prometheus Blog', 'weight': 1.0},
+        # New Cloud Native source
+        {'url': 'https://www.fluentd.org/blog/feed.xml', 'name': 'Fluentd Blog', 'weight': 1.0},
     ],
     'AI': [
         {'url': 'https://openai.com/blog/rss.xml', 'name': 'OpenAI Blog', 'weight': 1.3},
@@ -66,6 +75,10 @@ RSS_SOURCES = {
         {'url': 'https://www.nature.com/natmachintell.rss', 'name': 'Nature Machine Intelligence', 'weight': 1.3},
         {'url': 'https://medicalai.substack.com/feed', 'name': '医学AI前沿博客', 'weight': 1.0},
         {'url': 'https://ai.googleblog.com/feeds/posts/default', 'name': '谷歌AI博客', 'weight': 1.1},
+        # New AI sources
+        {'url': 'https://lilianweng.github.io/feed.xml', 'name': "Lil'Log", 'weight': 1.2},
+        {'url': 'https://www.assemblyai.com/blog/rss/', 'name': 'AssemblyAI Blog', 'weight': 1.0},
+        {'url': 'https://research.google/blog/rss/', 'name': 'Google Research Blog', 'weight': 1.1},
     ],
     '区块链': [
         {'url': 'https://app.chaingpt.org/rssfeeds.xml', 'name': 'ChainGPT RSS', 'weight': 1.1},
@@ -93,12 +106,14 @@ YOUTUBE_SOURCES = {
     ],
     'AI': [
         {'url': 'https://www.youtube.com/feeds/videos.xml?channel_id=UCYO_jab_esuFRV4b17AJtAw', 'name': '3Blue1Brown', 'weight': 1.0},  # Math/ML visualizations
+        {'url': 'https://www.youtube.com/feeds/videos.xml?channel_id=UC4JX40jDee_tINbkjycV4Sg', 'name': 'Tech With Tim', 'weight': 1.0},  # Python/AI tutorials
+    ],
+    '后端': [
+        {'url': 'https://www.youtube.com/feeds/videos.xml?channel_id=UC9-y-6csu5WGm29I7JiwpnA', 'name': 'Computerphile', 'weight': 1.0},  # Backend/CS fundamentals
     ],
     '其他': [
         {'url': 'https://www.youtube.com/feeds/videos.xml?channel_id=UCjfH9h4NpdqH3A-7kY6hRfA', 'name': '尚硅谷', 'weight': 1.0},
         {'url': 'https://www.youtube.com/feeds/videos.xml?channel_id=UC8tz_v5p4j5pWmB6JwF8n7Q', 'name': '黑马程序员', 'weight': 1.0},
-        {'url': 'https://www.youtube.com/feeds/videos.xml?channel_id=UC4JX40jDee_tINbkjycV4Sg', 'name': 'Tech With Tim', 'weight': 1.0},
-        {'url': 'https://www.youtube.com/feeds/videos.xml?channel_id=UC9-y-6csu5WGm29I7JiwpnA', 'name': 'Computerphile', 'weight': 1.0},
     ],
 }
 
@@ -154,10 +169,22 @@ def truncate_summary(summary, max_length=500):
     return clean
 
 
+def detect_source_type(source_name, url, is_video):
+    """Detect source type based on source name and URL."""
+    if is_video:
+        return 'youtube'
+    if 'arxiv' in url.lower() or 'arxiv' in source_name.lower():
+        return 'arxiv'
+    return 'rss'
+
+
 def fetch_rss_feed(url, source_name, category, weight, is_video=False):
     """Fetch and parse a single RSS feed."""
     print(f"Fetching: {source_name} ({url})")
     articles = []
+
+    # Detect source type for proper tagging
+    source_type = detect_source_type(source_name, url, is_video)
 
     try:
         # Use requests to get the content first (better for some sites)
@@ -176,12 +203,16 @@ def fetch_rss_feed(url, source_name, category, weight, is_video=False):
                 link = entry.get('link', '')
                 summary = entry.get('summary', entry.get('description', ''))
 
+                # For arXiv, try to get the abstract if available
+                if source_type == 'arxiv' and not summary:
+                    summary = entry.get('arxiv_abstract', '')
+
                 if not link:
                     continue
 
                 published_date = parse_date(entry)
                 hot_score = calculate_hot_score(published_date, weight)
-                
+
                 # Use dynamic classification for mixed sources
                 final_category = get_category_for_article(title, source_name, category)
                 if final_category != category:
@@ -195,7 +226,8 @@ def fetch_rss_feed(url, source_name, category, weight, is_video=False):
                     'source': source_name,
                     'category': final_category,
                     'hot_score': hot_score,
-                    'is_video': is_video
+                    'is_video': is_video,
+                    'source_type': source_type
                 })
             except Exception as e:
                 print(f"Error processing entry: {e}")
@@ -232,7 +264,8 @@ def save_articles(articles):
                 source=article['source'],
                 category=article['category'],
                 hot_score=article['hot_score'],
-                is_video=article.get('is_video', False)
+                is_video=article.get('is_video', False),
+                source_type=article.get('source_type', 'rss')
             )
             db.session.add(news)
             added += 1
@@ -308,9 +341,9 @@ def run_crawler():
             total_skipped += skipped
             time.sleep(1)
 
-    # Cleanup old news (keep last 7 days)
+    # Cleanup old news (keep last 30 days)
     print("\n--- Cleaning up old news ---")
-    cleanup_old_news(7)
+    cleanup_old_news(30)
 
     print("\n" + "=" * 50)
     print(f"Crawler finished!")

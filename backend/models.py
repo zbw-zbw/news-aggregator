@@ -20,6 +20,7 @@ class News(db.Model):
     category = db.Column(db.Text, index=True)
     hot_score = db.Column(db.Float, default=0.0, index=True)
     is_video = db.Column(db.Boolean, default=False)
+    source_type = db.Column(db.String(20), default='rss')  # 'rss', 'youtube', 'arxiv'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Composite indexes for common query patterns
@@ -39,7 +40,8 @@ class News(db.Model):
             'published': self.published.isoformat() if self.published else None,
             'category': self.category,
             'hot_score': self.hot_score,
-            'is_video': self.is_video
+            'is_video': self.is_video,
+            'source_type': self.source_type
         }
 
     def __repr__(self):

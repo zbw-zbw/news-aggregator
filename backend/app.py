@@ -1,13 +1,26 @@
 """
 Flask API for the news aggregator.
 """
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, g
 from flask_cors import CORS
+from flask_caching import Cache
 from models import db, News
 import os
+import time
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)
+
+# Cache configuration
+cache = Cache(app, config={
+    'CACHE_TYPE': 'simple',
+    'CACHE_DEFAULT_TIMEOUT': 300
+})
 
 # Database configuration
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -36,7 +49,23 @@ with app.app_context():
     db.session.commit()
 
 
+@app.before_request
+def start_timer():
+    """Start request timing."""
+    g.start = time.time()
+
+
+@app.after_request
+def log_request(response):
+    """Log request details and timing."""
+    if hasattr(g, 'start'):
+        duration = time.time() - g.start
+        logger.info(f'{request.method} {request.path} - {response.status_code} - {duration:.3f}s')
+    return response
+
+
 @app.route('/api/news', methods=['GET'])
+@cache.cached(timeout=300, query_string=True)
 def get_news():
     """
     Get paginated news list.
@@ -90,6 +119,7 @@ CATEGORY_ORDER = ['', 'AI', '前端', '后端', '云原生', '区块链', '其�
 
 
 @app.route('/api/categories', methods=['GET'])
+@cache.cached(timeout=600)
 def get_categories():
     """Get all available categories in predefined order."""
     from sqlalchemy import func
@@ -113,6 +143,14 @@ def get_categories():
 def health_check():
     """Health check endpoint."""
     return jsonify({'status': 'ok'})
+
+
+@app.route('/api/admin/clear-cache', methods=['POST'])
+def clear_cache():
+    """Clear cache endpoint for admin use."""
+    cache.clear()
+    logger.info('Cache cleared')
+    return jsonify({'status': 'ok', 'message': 'Cache cleared successfully'})
 
 
 def init_db():
