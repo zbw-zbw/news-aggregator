@@ -47,6 +47,12 @@ jobs:
           git diff --quiet && git diff --staged --quiet || git commit -m "chore: auto update news [skip ci]"
           git push
 
+      - name: Warm up Render container
+        run: |
+          echo "Warming up Render container..."
+          curl -s -m 60 https://news-aggregator-a1c7.onrender.com/api/categories > /dev/null || true
+          echo "Container warmed up"
+
       - name: Create summary
         run: |
           echo "## Crawler Summary" >> $GITHUB_STEP_SUMMARY

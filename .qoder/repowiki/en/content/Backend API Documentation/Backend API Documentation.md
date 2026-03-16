@@ -4,12 +4,19 @@
 **Referenced Files in This Document**
 - [app.py](file://backend/app.py)
 - [models.py](file://backend/models.py)
-- [crawler.py](file://backend/crawler.py)
 - [requirements.txt](file://backend/requirements.txt)
+- [maintenance.py](file://backend/maintenance.py)
 - [README.md](file://README.md)
-- [App.vue](file://frontend/src/App.vue)
-- [crawler.yml](file://.github/workflows/crawler.yml)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Added Flask-Caching integration with cache decorators on key endpoints
+- Implemented request timing and logging capabilities with before/after request hooks
+- Enhanced category ordering with predefined category order system
+- Added administrative cache clearing endpoint for cache management
+- Updated performance considerations to include caching strategy
+- Enhanced troubleshooting guide with caching-related diagnostics
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -17,35 +24,38 @@
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
+6. [Performance Considerations](#performance-considerations)
+7. [Troubleshooting Guide](#troubleshooting-guide)
+8. [Conclusion](#conclusion)
 
 ## Introduction
-This document provides comprehensive API documentation for the Flask backend REST API of the News Aggregator application. The API serves news articles aggregated from multiple RSS feeds, organized into two categories: "Programmer Circle" and "AI Circle". The backend is built with Flask, uses SQLite for persistence, and includes automated crawling functionality to keep content fresh.
+This document provides comprehensive API documentation for the Flask backend REST API of the News Aggregator application. The API serves news articles aggregated from multiple RSS feeds, organized into multiple categories including "AI", "前端", "后端", "云原生", "区块链", and "其他". The backend is built with Flask, uses SQLite for persistence, includes Flask-Caching for performance optimization, and features automated crawling functionality to keep content fresh.
 
 Key features:
 - Paginated news listing with filtering and sorting
 - Single news item retrieval by ID
-- Category enumeration
+- Category enumeration with predefined ordering
 - System health check endpoint
+- Administrative cache clearing endpoint
+- Request timing and logging capabilities
 - Automated daily crawling via GitHub Actions
 
 ## Project Structure
-The backend follows a modular structure with clear separation of concerns:
-- Application entry point and routing
-- Database models and ORM configuration
+The backend follows a modular structure with clear separation of concerns and enhanced caching infrastructure:
+- Application entry point and routing with caching decorators
+- Database models and ORM configuration with composite indexes
 - RSS crawling and data processing
-- Dependencies and deployment configuration
+- Maintenance utilities for cache warming and database cleanup
+- Dependencies and deployment configuration with Flask-Caching
 
 ```mermaid
 graph TB
 subgraph "Backend"
-APP[app.py<br/>Flask Application]
-MODELS[models.py<br/>Database Models]
+APP[app.py<br/>Flask Application with Caching]
+MODELS[models.py<br/>Database Models with Indexes]
 CRAWLER[crawler.py<br/>RSS Crawler]
-REQ[requirements.txt<br/>Dependencies]
+MAINT[maintenance.py<br/>Maintenance & Cache Utilities]
+REQ[requirements.txt<br/>Enhanced Dependencies]
 end
 subgraph "Frontend"
 FRONT[Vue.js Application]
@@ -58,78 +68,95 @@ FRONT --> APP
 APP --> MODELS
 MODELS --> DB
 CRAWLER --> MODELS
+MAINT --> APP
 GHA --> CRAWLER
 GHA --> DB
 ```
 
 **Diagram sources**
-- [app.py:1-87](file://backend/app.py#L1-L87)
-- [models.py:1-39](file://backend/models.py#L1-L39)
-- [crawler.py:1-217](file://backend/crawler.py#L1-L217)
-- [requirements.txt:1-8](file://backend/requirements.txt#L1-L8)
+- [app.py:1-182](file://backend/app.py#L1-L182)
+- [models.py:1-49](file://backend/models.py#L1-L49)
+- [maintenance.py:1-183](file://backend/maintenance.py#L1-L183)
+- [requirements.txt:1-9](file://backend/requirements.txt#L1-L9)
 
 **Section sources**
 - [README.md:5-26](file://README.md#L5-L26)
-- [app.py:9-18](file://backend/app.py#L9-L18)
+- [app.py:16-31](file://backend/app.py#L16-L31)
 
 ## Core Components
-The backend consists of four primary API endpoints that form the core of the news aggregation service:
+The backend consists of five primary API endpoints that form the core of the news aggregation service, now enhanced with caching and monitoring capabilities:
 
 ### Database Model
-The News model defines the structure of stored news articles with comprehensive metadata including title, summary, link, publication date, source, category, and hot score for trending content.
+The News model defines the structure of stored news articles with comprehensive metadata including title, summary, link, publication date, source, category, hot score, and video indicators for multimedia content.
 
 **Section sources**
-- [models.py:10-39](file://backend/models.py#L10-L39)
+- [models.py:10-49](file://backend/models.py#L10-L49)
 
 ### Application Configuration
-The Flask application is configured with CORS support for cross-origin requests, SQLite database connection, and production-ready server settings.
+The Flask application is configured with CORS support, Flask-Caching integration, SQLite database connection, and production-ready server settings with request timing and logging capabilities.
 
 **Section sources**
-- [app.py:9-18](file://backend/app.py#L9-L18)
-- [app.py:84-87](file://backend/app.py#L84-L87)
+- [app.py:16-31](file://backend/app.py#L16-L31)
+- [app.py:52-64](file://backend/app.py#L52-L64)
+- [app.py:19-23](file://backend/app.py#L19-L23)
 
 ## Architecture Overview
-The system follows a client-server architecture with automated data ingestion:
+The system follows a client-server architecture with automated data ingestion and intelligent caching:
 
 ```mermaid
 sequenceDiagram
 participant Client as "Client Application"
-participant API as "Flask API"
+participant API as "Flask API with Cache"
+participant Cache as "Flask-Caching"
 participant DB as "SQLite Database"
 participant Crawler as "RSS Crawler"
 Client->>API : GET /api/news
+API->>Cache : Check cached response
+alt Cache Hit
+Cache-->>API : Return cached JSON
+else Cache Miss
 API->>DB : Query news with pagination
 DB-->>API : Paginated results
+API->>Cache : Store response with TTL
+Cache-->>API : Cache stored
+end
 API-->>Client : JSON response with items, total, page, pages
 Client->>API : GET /api/news/ : id
 API->>DB : Fetch specific news item
 DB-->>API : News record
 API-->>Client : JSON news item
 Client->>API : GET /api/categories
+API->>Cache : Check cached categories
+Cache-->>API : Return cached categories
 API-->>Client : JSON array of categories
 Client->>API : GET /api/health
 API-->>Client : JSON health status
+Client->>API : POST /api/admin/clear-cache
+API->>Cache : Clear all cached responses
+Cache-->>API : Cache cleared
+API-->>Client : JSON success message
 Note over Crawler,DB : Daily automated process
 Crawler->>DB : Insert new articles
 Crawler->>DB : Cleanup old articles
 ```
 
 **Diagram sources**
-- [app.py:21-74](file://backend/app.py#L21-L74)
-- [models.py:10-39](file://backend/models.py#L10-L39)
-- [crawler.py:180-212](file://backend/crawler.py#L180-L212)
+- [app.py:67-153](file://backend/app.py#L67-L153)
+- [models.py:10-49](file://backend/models.py#L10-L49)
+- [maintenance.py:20-28](file://backend/maintenance.py#L20-L28)
 
 ## Detailed Component Analysis
 
 ### API Endpoints
 
 #### GET /api/news
-**Purpose**: Retrieve paginated news listings with filtering and sorting capabilities.
+**Purpose**: Retrieve paginated news listings with filtering and sorting capabilities, now cached for improved performance.
 
 **Request Parameters**:
-- `category` (string, optional): Filter by category ("程序员圈" or "AI圈")
+- `category` (string, optional): Filter by category from /api/categories
 - `sort` (string, optional): Sorting order ("newest" or "hottest", default: "newest")
 - `page` (integer, optional): Page number (default: 1)
+- `per_page` (integer, optional): Items per page (default: 20, max: 100)
 
 **Response Schema**:
 ```json
@@ -143,7 +170,9 @@ Crawler->>DB : Cleanup old articles
       "source": "string",
       "published": "2023-01-01T00:00:00Z",
       "category": "string",
-      "hot_score": 0.0
+      "hot_score": 0.0,
+      "is_video": false,
+      "source_type": "rss"
     }
   ],
   "total": 100,
@@ -156,8 +185,13 @@ Crawler->>DB : Cleanup old articles
 - 200: Successful retrieval
 - 404: News item not found (when accessing individual news)
 
+**Caching Behavior**:
+- Cached with 300-second (5-minute) timeout
+- Cache key includes query string parameters
+- Automatic cache invalidation when cache is cleared
+
 **Pagination Details**:
-- Items per page: 20
+- Items per page: 20 (with max 100)
 - Zero-indexed pagination
 - Graceful handling of invalid page numbers
 
@@ -166,8 +200,8 @@ Crawler->>DB : Cleanup old articles
 - Hottest: Sorts by calculated hot score descending
 
 **Section sources**
-- [app.py:21-55](file://backend/app.py#L21-L55)
-- [models.py:24-35](file://backend/models.py#L24-L35)
+- [app.py:67-106](file://backend/app.py#L67-L106)
+- [models.py:32-45](file://backend/models.py#L32-L45)
 
 #### GET /api/news/:id
 **Purpose**: Retrieve a specific news article by its unique identifier.
@@ -185,7 +219,9 @@ Crawler->>DB : Cleanup old articles
   "source": "string",
   "published": "2023-01-01T00:00:00Z",
   "category": "string",
-  "hot_score": 0.0
+  "hot_score": 0.0,
+  "is_video": false,
+  "source_type": "rss"
 }
 ```
 
@@ -198,26 +234,31 @@ Crawler->>DB : Cleanup old articles
 - Graceful handling of invalid integer IDs
 
 **Section sources**
-- [app.py:58-62](file://backend/app.py#L58-L62)
-- [models.py:24-35](file://backend/models.py#L24-L35)
+- [app.py:109-113](file://backend/app.py#L109-L113)
+- [models.py:32-45](file://backend/models.py#L32-L45)
 
 #### GET /api/categories
-**Purpose**: Retrieve all available news categories.
+**Purpose**: Retrieve all available news categories in predefined order.
 
 **Response Schema**:
 ```json
-["程序员圈", "AI圈"]
+["AI", "前端", "后端", "云原生", "区块链", "其他"]
 ```
 
 **Response Codes**:
 - 200: Successful retrieval
 
-**Notes**:
-- Static endpoint returning predefined categories
-- No query parameters required
+**Caching Behavior**:
+- Cached with 600-second (10-minute) timeout
+- Categories are cached separately from news listings
+
+**Category Ordering**:
+- Predefined order: AI, 前端, 后端, 云原生, 区块链, 其他
+- Unknown categories are placed at the end
+- Handles empty/null categories gracefully
 
 **Section sources**
-- [app.py:65-68](file://backend/app.py#L65-L68)
+- [app.py:121-139](file://backend/app.py#L121-L139)
 
 #### GET /api/health
 **Purpose**: System health check endpoint for monitoring and load balancer health probes.
@@ -236,7 +277,34 @@ Crawler->>DB : Cleanup old articles
 - Lightweight operation with minimal resource usage
 
 **Section sources**
-- [app.py:71-74](file://backend/app.py#L71-L74)
+- [app.py:142-145](file://backend/app.py#L142-L145)
+
+#### POST /api/admin/clear-cache
+**Purpose**: Administrative endpoint to clear all cached responses for cache management during deployments or maintenance.
+
+**Authentication Requirements**:
+- Requires administrative access (no built-in authentication)
+- Use behind reverse proxy with authentication
+
+**Response Schema**:
+```json
+{
+  "status": "ok",
+  "message": "Cache cleared successfully"
+}
+```
+
+**Response Codes**:
+- 200: Cache cleared successfully
+- 500: Internal server error (if cache clearing fails)
+
+**Usage**:
+- Call after deploying new versions
+- Use during maintenance windows
+- Monitor cache clearing events in logs
+
+**Section sources**
+- [app.py:148-153](file://backend/app.py#L148-L153)
 
 ### Data Models
 
@@ -254,6 +322,8 @@ class News {
 +Text source
 +Text category
 +Float hot_score
++Boolean is_video
++String source_type
 +DateTime created_at
 +to_dict() dict
 +__repr__() string
@@ -267,7 +337,7 @@ News --> Database : "stored in"
 ```
 
 **Diagram sources**
-- [models.py:10-39](file://backend/models.py#L10-L39)
+- [models.py:10-49](file://backend/models.py#L10-L49)
 
 **Model Fields**:
 - `id`: Auto-incrementing primary key
@@ -276,8 +346,10 @@ News --> Database : "stored in"
 - `link`: Unique URL to original article (required)
 - `published`: Publication timestamp (nullable)
 - `source`: Source website name (nullable)
-- `category`: News category ("程序员圈" or "AI圈")
+- `category`: News category with predefined ordering
 - `hot_score`: Trending score for hottest sorting
+- `is_video`: Video content indicator
+- `source_type`: Source type ('rss', 'youtube', 'arxiv')
 - `created_at`: Record creation timestamp
 
 **Serialization**:
@@ -286,109 +358,57 @@ News --> Database : "stored in"
 - Null values are preserved as null in JSON
 
 **Section sources**
-- [models.py:10-39](file://backend/models.py#L10-L39)
+- [models.py:10-49](file://backend/models.py#L10-L49)
 
-### RSS Crawler Integration
-The crawler system automatically aggregates content from multiple RSS feeds:
+### Request Timing and Logging
+The application includes comprehensive request timing and logging capabilities:
 
-```mermaid
-flowchart TD
-START([Crawler Start]) --> CONFIG["Load RSS Sources"]
-CONFIG --> LOOP_CATEGORIES["Loop Categories"]
-LOOP_CATEGORIES --> FETCH_FEED["Fetch RSS Feed"]
-FETCH_FEED --> PARSE_ENTRIES["Parse Entries"]
-PARSE_ENTRIES --> CALCULATE_SCORE["Calculate Hot Score"]
-CALCULATE_SCORE --> TRUNCATE_SUMMARY["Truncate Summary"]
-TRUNCATE_SUMMARY --> CHECK_DUPLICATE["Check Duplicate"]
-CHECK_DUPLICATE --> |Duplicate| SKIP["Skip Entry"]
-CHECK_DUPLICATE --> |New| SAVE["Save to Database"]
-SAVE --> NEXT_ENTRY["Next Entry"]
-SKIP --> NEXT_ENTRY
-NEXT_ENTRY --> |More Entries| PARSE_ENTRIES
-NEXT_ENTRY --> |No More| NEXT_CATEGORY["Next Category"]
-NEXT_CATEGORY --> |More Categories| LOOP_CATEGORIES
-NEXT_CATEGORY --> |No More| CLEANUP["Cleanup Old News"]
-CLEANUP --> END([Crawler Complete])
-```
+**Logging Features**:
+- Request method, path, status code, and duration logged
+- Timeouts measured in seconds with 3 decimal precision
+- INFO level logging for all requests
+- Automatic timing via before/after request hooks
 
-**Diagram sources**
-- [crawler.py:180-212](file://backend/crawler.py#L180-L212)
-- [crawler.py:88-136](file://backend/crawler.py#L88-L136)
-
-**Crawling Process**:
-- Daily execution via GitHub Actions at 00:00 UTC
-- Processes predefined RSS feeds for each category
-- Calculates hot scores based on recency and source weights
-- Prevents duplicate entries
-- Cleans up articles older than 30 days
+**Timing Implementation**:
+- `start_timer()` hook records request start time
+- `log_request()` hook calculates and logs request duration
+- Graceful handling of missing timing data
 
 **Section sources**
-- [crawler.py:14-37](file://backend/crawler.py#L14-L37)
-- [crawler.py:62-74](file://backend/crawler.py#L62-L74)
-- [crawler.yml:4-6](file://.github/workflows/crawler.yml#L4-L6)
-
-## Dependency Analysis
-The backend has minimal external dependencies optimized for simplicity and reliability:
-
-```mermaid
-graph LR
-subgraph "Application Layer"
-FLASK[Flask 3.0.0]
-CORS[Flask-CORS 4.0.0]
-SQLALCHEMY[Flask-SQLAlchemy 3.1.1]
-end
-subgraph "Data Processing"
-FEEDPARSER[Feedparser 6.0.10]
-REQUESTS[Requests 2.31.0]
-DATEUTIL[python-dateutil 2.8.2]
-end
-subgraph "Deployment"
-GUNICORN[Gunicorn 21.2.0]
-end
-subgraph "Database"
-SQLITE[SQLite]
-end
-FLASK --> SQLALCHEMY
-FLASK --> CORS
-SQLALCHEMY --> SQLITE
-FEEDPARSER --> SQLALCHEMY
-REQUESTS --> FEEDPARSER
-DATEUTIL --> FEEDPARSER
-FLASK --> GUNICORN
-```
-
-**Diagram sources**
-- [requirements.txt:1-8](file://backend/requirements.txt#L1-L8)
-
-**Dependency Management**:
-- Flask provides the web framework and routing
-- SQLAlchemy handles database operations and ORM
-- Feedparser processes RSS feed content
-- Requests manages HTTP communication with RSS sources
-- Gunicorn serves the application in production
-- SQLite provides lightweight local storage
-
-**Section sources**
-- [requirements.txt:1-8](file://backend/requirements.txt#L1-L8)
+- [app.py:52-64](file://backend/app.py#L52-L64)
 
 ## Performance Considerations
-The API is designed for optimal performance and scalability:
+The API is designed for optimal performance and scalability with enhanced caching and monitoring:
 
 ### Database Optimization
 - **Pagination**: Fixed page size of 20 items prevents memory issues
-- **Indexing**: Primary key indexing on news table
+- **Indexing**: Comprehensive indexing strategy including composite indexes
 - **Query Optimization**: Efficient filtering and ordering operations
 - **Connection Pooling**: SQLAlchemy manages database connections
 
 ### Caching Strategy
-- **Hot Score Calculation**: Real-time computation ensures freshness
-- **Memory Efficiency**: Streaming RSS processing prevents memory spikes
-- **Graceful Degradation**: Fallback mechanisms for failed RSS sources
+- **News Endpoint**: 300-second (5-minute) cache with query string parameter support
+- **Categories Endpoint**: 600-second (10-minute) cache for static category data
+- **Cache Invalidation**: Administrative endpoint for cache clearing
+- **Cache Warmup**: Categories endpoint warms cache with predefined ordering
+- **Memory Efficiency**: Simple cache backend suitable for small-scale deployment
+
+### Request Monitoring
+- **Performance Tracking**: Automatic request duration logging
+- **Error Detection**: Request timing helps identify slow endpoints
+- **Resource Usage**: Logging aids in capacity planning
 
 ### Scalability Factors
 - **Horizontal Scaling**: Stateless API design allows multiple instances
 - **Database Constraints**: Unique link constraint prevents duplicates
 - **Resource Limits**: Configurable timeouts and retry logic
+- **Cache Efficiency**: Reduces database load for frequently accessed endpoints
+
+**Section sources**
+- [app.py:19-23](file://backend/app.py#L19-L23)
+- [app.py:68](file://backend/app.py#L68)
+- [app.py:122](file://backend/app.py#L122)
+- [app.py:148-153](file://backend/app.py#L148-L153)
 
 ## Troubleshooting Guide
 
@@ -409,6 +429,18 @@ The API is designed for optimal performance and scalability:
 - Category filtering edge cases
 - JSON serialization problems
 
+**Caching Issues**
+- Cache not warming properly
+- Stale data in cache
+- Cache clearing failures
+- Cache timeout configuration
+
+**Performance Issues**
+- Slow request times
+- High database query times
+- Cache miss rates
+- Memory usage concerns
+
 ### Error Response Patterns
 The API follows consistent error handling patterns:
 
@@ -416,37 +448,67 @@ The API follows consistent error handling patterns:
 sequenceDiagram
 participant Client as "Client"
 participant API as "API Handler"
+participant Cache as "Cache Layer"
 participant DB as "Database"
 Client->>API : Request with invalid parameters
 API->>API : Validate parameters
-API->>API : Check database constraints
-API->>API : Handle exceptions
-API-->>Client : Error response with status code
+API->>Cache : Check cache availability
+API->>DB : Execute database query
+DB-->>API : Query results
+API->>Cache : Store results in cache
+API-->>Client : Success response with status code
 Note over API : Consistent error format across endpoints
 ```
 
 **Section sources**
-- [app.py:58-62](file://backend/app.py#L58-L62)
-- [crawler.py:131-135](file://backend/crawler.py#L131-L135)
+- [app.py:109-113](file://backend/app.py#L109-L113)
+- [app.py:148-153](file://backend/app.py#L148-L153)
 
 ### Monitoring and Health Checks
 - Use `/api/health` endpoint for system monitoring
+- Monitor cache hit rates and performance metrics
+- Track request timing and duration patterns
 - Monitor database file size growth
 - Track crawler execution logs
-- Monitor API response times
+- Monitor API response times and error rates
 
 **Section sources**
-- [app.py:71-74](file://backend/app.py#L71-L74)
-- [crawler.yml:41-46](file://.github/workflows/crawler.yml#L41-L46)
+- [app.py:142-145](file://backend/app.py#L142-L145)
+- [app.py:58-64](file://backend/app.py#L58-L64)
+
+### Cache Management
+**Cache Warmup Strategy**:
+- Categories endpoint automatically warms cache with predefined ordering
+- News endpoint caches paginated results with query string parameters
+- Cache warming occurs on first request after cache clear
+
+**Cache Clearing Procedures**:
+- Use `/api/admin/clear-cache` for cache management
+- Clear cache during deployments or maintenance
+- Monitor cache clearing events in logs
+
+**Cache Configuration**:
+- Simple cache backend for development
+- 300-second timeout for news endpoint
+- 600-second timeout for categories endpoint
+- Query string parameter support for cache keys
+
+**Section sources**
+- [app.py:121-139](file://backend/app.py#L121-L139)
+- [app.py:67-106](file://backend/app.py#L67-L106)
+- [app.py:148-153](file://backend/app.py#L148-L153)
 
 ## Conclusion
-The Flask backend provides a robust, efficient, and maintainable REST API for the news aggregation service. Its design emphasizes simplicity, performance, and reliability while maintaining flexibility for future enhancements. The combination of automated RSS crawling, structured API endpoints, and minimal dependencies creates a solid foundation for both development and production deployment.
+The Flask backend provides a robust, efficient, and maintainable REST API for the news aggregation service with enhanced performance through Flask-Caching integration. Its design emphasizes simplicity, performance, reliability, and operational visibility while maintaining flexibility for future enhancements. The combination of automated RSS crawling, structured API endpoints, intelligent caching, comprehensive logging, and administrative cache management creates a solid foundation for both development and production deployment.
 
 Key strengths include:
 - Clean API design with comprehensive documentation
+- Intelligent caching strategy with configurable timeouts
+- Request timing and logging for performance monitoring
+- Administrative cache management capabilities
 - Automated content refresh system
 - Efficient database operations with proper indexing
 - Production-ready deployment configuration
 - Comprehensive error handling and monitoring support
 
-The API is well-suited for integration with modern web applications and can serve as a foundation for scaling the news aggregation service to meet growing demands.
+The API is well-suited for integration with modern web applications and can serve as a foundation for scaling the news aggregation service to meet growing demands while maintaining excellent performance characteristics.
