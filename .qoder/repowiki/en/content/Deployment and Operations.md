@@ -12,7 +12,17 @@
 - [frontend/vite.config.js](file://frontend/vite.config.js)
 - [frontend/src/App.vue](file://frontend/src/App.vue)
 - [frontend/index.html](file://frontend/index.html)
+- [render.yaml](file://render.yaml)
+- [vercel.json](file://vercel.json)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated CI/CD pipeline from daily to hourly crawler scheduling
+- Added Render platform deployment configuration with proper Python setup
+- Added Vercel frontend deployment configuration
+- Updated database cleanup period from 30 days to 7 days
+- Enhanced deployment architecture documentation with platform-specific configurations
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -27,7 +37,7 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document provides comprehensive deployment and operations guidance for the News Aggregator application. It covers production deployment strategies for backend and frontend, CI/CD automation via GitHub Actions, scheduled crawling, environment configuration, database setup, scaling considerations, monitoring and logging, performance optimization, maintenance, rollback and disaster recovery, security, SSL and CDN integration, and operational runbooks.
+This document provides comprehensive deployment and operations guidance for the News Aggregator application. It covers production deployment strategies for backend and frontend, CI/CD automation via GitHub Actions with hourly scheduling, scheduled crawling, environment configuration, database setup, scaling considerations, monitoring and logging, performance optimization, maintenance, rollback and disaster recovery, security, SSL and CDN integration, and operational runbooks.
 
 ## Project Structure
 The repository is organized into two primary parts:
@@ -37,7 +47,7 @@ The repository is organized into two primary parts:
 Key characteristics:
 - Backend uses a local SQLite database file stored under the backend directory
 - Frontend is a static SPA that communicates with the backend via a configurable API base URL
-- CI/CD automates daily crawling and commits database updates to the repository
+- CI/CD automates hourly crawling and commits database updates to the repository
 
 ```mermaid
 graph TB
@@ -65,21 +75,21 @@ G --> |proxy /api| A
 ```
 
 **Diagram sources**
-- [backend/app.py:1-87](file://backend/app.py#L1-L87)
-- [backend/crawler.py:1-217](file://backend/crawler.py#L1-L217)
+- [backend/app.py:1-95](file://backend/app.py#L1-L95)
+- [backend/crawler.py:1-321](file://backend/crawler.py#L1-L321)
 - [backend/models.py:1-39](file://backend/models.py#L1-L39)
 - [backend/requirements.txt:1-8](file://backend/requirements.txt#L1-L8)
-- [frontend/vite.config.js:1-17](file://frontend/vite.config.js#L1-L17)
-- [.github/workflows/crawler.yml:1-46](file://.github/workflows/crawler.yml#L1-L46)
+- [frontend/vite.config.js:1-21](file://frontend/vite.config.js#L1-L21)
+- [.github/workflows/crawler.yml:1-50](file://.github/workflows/crawler.yml#L1-L50)
 
 **Section sources**
 - [README.md:1-67](file://README.md#L1-L67)
-- [backend/app.py:1-87](file://backend/app.py#L1-L87)
-- [backend/crawler.py:1-217](file://backend/crawler.py#L1-L217)
+- [backend/app.py:1-95](file://backend/app.py#L1-L95)
+- [backend/crawler.py:1-321](file://backend/crawler.py#L1-L321)
 - [backend/models.py:1-39](file://backend/models.py#L1-L39)
 - [backend/requirements.txt:1-8](file://backend/requirements.txt#L1-L8)
-- [frontend/vite.config.js:1-17](file://frontend/vite.config.js#L1-L17)
-- [.github/workflows/crawler.yml:1-46](file://.github/workflows/crawler.yml#L1-L46)
+- [frontend/vite.config.js:1-21](file://frontend/vite.config.js#L1-L21)
+- [.github/workflows/crawler.yml:1-50](file://.github/workflows/crawler.yml#L1-L50)
 
 ## Core Components
 - Backend API
@@ -88,12 +98,12 @@ G --> |proxy /api| A
   - Gunicorn configured for production WSGI serving
 - Crawler
   - RSS feed ingestion from curated sources, deduplication, hot scoring, and cleanup of old entries
-  - Scheduled execution via GitHub Actions
+  - Scheduled execution via GitHub Actions with hourly frequency
 - Frontend
   - Vue 3 SPA with category filtering, sorting, pagination, and responsive UI
   - Development proxy to backend during local development
 - CI/CD
-  - Daily cron job to run the crawler and commit database updates
+  - Hourly cron job to run the crawler and commit database updates
 
 Operational highlights:
 - API endpoints include pagination, category filtering, and sorting
@@ -201,7 +211,7 @@ Env["Set VITE_API_BASE"] --> Serve
 - [README.md:49-53](file://README.md#L49-L53)
 
 ### CI/CD Pipeline (GitHub Actions)
-- Schedule: Daily at 00:00 UTC (8:00 AM Beijing Time)
+- Schedule: Hourly at minute 0 (0 * * * *)
 - Steps:
   - Checkout repository
   - Setup Python 3.11
@@ -230,7 +240,7 @@ GH->>GH : "Commit and push backend/news.db"
 - [backend/crawler.py:180-212](file://backend/crawler.py#L180-L212)
 
 **Section sources**
-- [.github/workflows/crawler.yml:1-46](file://.github/workflows/crawler.yml#L1-L46)
+- [.github/workflows/crawler.yml:1-50](file://.github/workflows/crawler.yml#L1-L50)
 - [backend/crawler.py:180-212](file://backend/crawler.py#L180-L212)
 
 ### Database Setup and Management
@@ -239,14 +249,14 @@ GH->>GH : "Commit and push backend/news.db"
   - The backend initializes the schema when run locally
   - In production, ensure the database file persists across deploys
 - Maintenance
-  - The crawler periodically removes articles older than 30 days
+  - The crawler periodically removes articles older than 7 days
   - Monitor database size growth and adjust cleanup policies if needed
 
 ```mermaid
 flowchart TD
 Init["Initialize DB Schema"] --> RunCrawl["Run Crawler"]
 RunCrawl --> Insert["Insert new articles"]
-Insert --> Cleanup["Delete articles older than 30 days"]
+Insert --> Cleanup["Delete articles older than 7 days"]
 Cleanup --> SizeCheck{"DB size acceptable?"}
 SizeCheck --> |No| Optimize["Consider retention policy adjustments"]
 SizeCheck --> |Yes| Done["Continue normal operation"]
@@ -270,8 +280,6 @@ SizeCheck --> |Yes| Done["Continue normal operation"]
   - Migrate to a managed database (e.g., PostgreSQL-compatible service) for horizontal scaling and improved concurrency
   - Introduce read replicas and caching (e.g., Redis) for hot queries
   - Split frontend and backend into separate services with independent scaling policies
-
-[No sources needed since this section provides general guidance]
 
 ### Monitoring and Logging
 - Health endpoint
@@ -348,7 +356,7 @@ SizeCheck --> |Yes| Done["Continue normal operation"]
 - SSL/TLS
   - Rely on platform-provided certificates for Render and Vercel
 - CDN
-  - Use Vercel’s global CDN for frontend assets
+  - Use Vercel's global CDN for frontend assets
   - For backend, consider a CDN in front of the API if traffic increases
 - Mixed content
   - Ensure API_BASE points to HTTPS in production
@@ -403,8 +411,6 @@ V --> Z
 - Crawler
   - Monitor network timeouts and retry logic; avoid overloading external feeds
 
-[No sources needed since this section provides general guidance]
-
 ## Troubleshooting Guide
 - Backend not responding
   - Verify /api/health endpoint
@@ -426,9 +432,7 @@ V --> Z
 - [backend/app.py:77-82](file://backend/app.py#L77-L82)
 
 ## Conclusion
-The News Aggregator is designed for simplicity and cost-effectiveness using free-tier platforms. Its deployment relies on Render for the backend, Vercel for the frontend, and GitHub Actions for daily crawling. Operational excellence requires careful attention to database persistence, environment configuration, monitoring, and incremental improvements such as managed databases and CDN caching.
-
-[No sources needed since this section summarizes without analyzing specific files]
+The News Aggregator is designed for simplicity and cost-effectiveness using free-tier platforms. Its deployment relies on Render for the backend, Vercel for the frontend, and GitHub Actions for hourly crawling. Operational excellence requires careful attention to database persistence, environment configuration, monitoring, and incremental improvements such as managed databases and CDN caching.
 
 ## Appendices
 
@@ -457,7 +461,7 @@ The News Aggregator is designed for simplicity and cost-effectiveness using free
 - [frontend/src/App.vue:119-120](file://frontend/src/App.vue#L119-L120)
 
 ### CI/CD Configuration Highlights
-- Schedule: 0 0 * * * (daily at 00:00 UTC)
+- Schedule: 0 * * * * (hourly at minute 0)
 - Job steps:
   - Python setup
   - Install backend dependencies
@@ -467,3 +471,26 @@ The News Aggregator is designed for simplicity and cost-effectiveness using free
 **Section sources**
 - [.github/workflows/crawler.yml:3-7](file://.github/workflows/crawler.yml#L3-L7)
 - [.github/workflows/crawler.yml:23-39](file://.github/workflows/crawler.yml#L23-L39)
+
+### Platform Configuration Files
+- Render Configuration (render.yaml)
+  - Service type: web
+  - Environment: Python
+  - Region: Singapore
+  - Plan: Free
+  - Build command: cd backend && pip install -r requirements.txt
+  - Start command: cd backend && gunicorn app:app --host 0.0.0.0 --port $PORT
+  - Health check: /api/health
+  - Environment variables: PYTHON_VERSION=3.11.0
+
+**Section sources**
+- [render.yaml:1-13](file://render.yaml#L1-L13)
+
+- Vercel Configuration (vercel.json)
+  - Build command: npm install && npm run build
+  - Output directory: dist
+  - Framework: null
+  - Rewrites: Single-page application routing to index.html
+
+**Section sources**
+- [vercel.json:1-9](file://vercel.json#L1-L9)
