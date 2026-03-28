@@ -1,13 +1,15 @@
 """
 Flask API for the news aggregator.
 """
+import sys
+import os
+import time
+import logging
 from flask import Flask, jsonify, request, g
 from flask_cors import CORS
 from flask_caching import Cache
 from models import db, News
-import os
-import time
-import logging
+from sqlalchemy import text
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -17,9 +19,11 @@ app = Flask(__name__)
 CORS(app)
 
 # Cache configuration
+# Keep default simple cache for dev; for production with multiple workers, use Redis and set CACHE_TYPE=CACHE_REDIS etc.
 cache = Cache(app, config={
-    'CACHE_TYPE': 'simple',
-    'CACHE_DEFAULT_TIMEOUT': 300
+    'CACHE_TYPE': os.environ.get('CACHE_TYPE', 'simple'),
+    'CACHE_DEFAULT_TIMEOUT': int(os.environ.get('CACHE_DEFAULT_TIMEOUT', '300')),
+    # if using redis, set CACHE_REDIS_URL env var and set CACHE_TYPE to 'redis'
 })
 
 # Database configuration
@@ -30,30 +34,13 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
-
-# Create indexes on app startup
-with app.app_context():
-    from sqlalchemy import text
-    indexes = [
-        'CREATE INDEX IF NOT EXISTS idx_news_category ON news (category)',
-        'CREATE INDEX IF NOT EXISTS idx_news_published ON news (published)',
-        'CREATE INDEX IF NOT EXISTS idx_news_hot_score ON news (hot_score)',
-        'CREATE INDEX IF NOT EXISTS idx_category_published ON news (category, published)',
-        'CREATE INDEX IF NOT EXISTS idx_category_hot_score ON news (category, hot_score)',
-    ]
-    for idx_sql in indexes:
-        try:
-            db.session.execute(text(idx_sql))
-        except Exception:
-            pass
-    db.session.commit()
-
+# NOTE: Removed import-time index creation to avoid blocking during app import/startup.
+# Index creation is only done inside init_db() and should be executed once during deployment.
 
 @app.before_request
 def start_timer():
     """Start request timing."""
     g.start = time.time()
-
 
 @app.after_request
 def log_request(response):
@@ -62,7 +49,6 @@ def log_request(response):
         duration = time.time() - g.start
         logger.info(f'{request.method} {request.path} - {response.status_code} - {duration:.3f}s')
     return response
-
 
 @app.route('/api/news', methods=['GET'])
 @cache.cached(timeout=300, query_string=True)
@@ -79,23 +65,18 @@ def get_news():
     sort = request.args.get('sort', 'newest')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
-    
-    # Limit per_page to reasonable range
+
     per_page = max(1, min(per_page, 100))
 
-    # Build query
     query = News.query
-
     if category:
         query = query.filter(News.category == category)
 
-    # Apply sorting
     if sort == 'hottest':
         query = query.order_by(News.hot_score.desc())
     else:
         query = query.order_by(News.published.desc())
 
-    # Paginate
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
 
     return jsonify({
@@ -105,49 +86,40 @@ def get_news():
         'pages': pagination.pages
     })
 
-
 @app.route('/api/news/<int:news_id>', methods=['GET'])
 def get_news_detail(news_id):
     """Get single news item by ID."""
     news = News.query.get_or_404(news_id)
     return jsonify(news.to_dict())
 
-
 # Category order - must match the defined 6-category system
-# Order: All (empty), AI, Frontend, Backend, Cloud Native, Blockchain, Other
 CATEGORY_ORDER = ['', 'AI', '前端', '后端', '云原生', '区块链', '其他']
-
 
 @app.route('/api/categories', methods=['GET'])
 @cache.cached(timeout=3600)
 def get_categories():
     """Get all available categories in predefined order."""
-    # Directly return predefined categories to avoid expensive database queries
+    # Hard-coded to avoid expensive DB query
     categories = ['AI', '前端', '后端', '云原生', '区块链', '其他']
     return jsonify(categories)
 
-
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    """Health check endpoint."""
     return jsonify({'status': 'ok'})
-
 
 @app.route('/api/admin/clear-cache', methods=['POST'])
 def clear_cache():
-    """Clear cache endpoint for admin use."""
     cache.clear()
     logger.info('Cache cleared')
     return jsonify({'status': 'ok', 'message': 'Cache cleared successfully'})
 
-
 def init_db():
     """Initialize the database and create indexes."""
     with app.app_context():
+        logger.info("Running init_db: creating tables and indexes if not present.")
         db.create_all()
-        
-        # Create indexes for performance (SQLite doesn't auto-add indexes to existing tables)
-        from sqlalchemy import text
+
+        # Create indexes for better query performance; doing this inside init_db only.
         indexes = [
             'CREATE INDEX IF NOT EXISTS idx_news_category ON news (category)',
             'CREATE INDEX IF NOT EXISTS idx_news_published ON news (published)',
@@ -159,11 +131,16 @@ def init_db():
             try:
                 db.session.execute(text(idx_sql))
             except Exception as e:
-                print(f"Index creation warning: {e}")
+                logger.warning(f"Index creation warning: {e}")
         db.session.commit()
-        print("Database initialized with indexes.")
-
+        logger.info("init_db completed.")
 
 if __name__ == '__main__':
-    init_db()
-    app.run(debug=False, host='0.0.0.0', port=5001)
+    # Support a one-off init command: `python backend/app.py --init-db`
+    if '--init-db' in sys.argv:
+        init_db()
+        print("Database initialized (init_db).")
+        sys.exit(0)
+
+    init_db() if os.environ.get('FORCE_INIT_DB_ON_START', '0') == '1' else None
+    app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 5001)))
