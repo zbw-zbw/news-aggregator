@@ -298,8 +298,17 @@ export default {
     SkeletonCard
   },
   setup() {
-    // Category options (will be fetched from API)
-    const categories = ref([])
+    // Category options - hardcoded to avoid API latency on first load
+    // API call is still made to validate, but UI renders immediately
+    const categories = ref([
+      { value: '', label: '全部' },
+      { value: 'AI', label: 'AI' },
+      { value: '前端', label: '前端' },
+      { value: '后端', label: '后端' },
+      { value: '云原生', label: '云原生' },
+      { value: '区块链', label: '区块链' },
+      { value: '其他', label: '其他' }
+    ])
     
     // Sort options
     const sortOptions = [
@@ -511,36 +520,35 @@ export default {
       '其他': '其他'
     }
     
-    // Fetch categories from API
+    // Fetch categories from API (for validation, but UI already has defaults)
     const fetchCategories = async () => {
+      // Use a short timeout to prevent blocking page load
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 3000) // 3 second timeout
+      
       try {
-        const response = await fetch(`${API_BASE}/api/categories`)
+        const response = await fetch(`${API_BASE}/api/categories`, {
+          signal: controller.signal
+        })
+        clearTimeout(timeoutId)
+        
         if (!response.ok) throw new Error('Failed to fetch categories')
         
         const data = await response.json()
-        // API returns array of category names, add "All" at the beginning
-        const allCategories = ['', ...data.filter(c => c !== '')]
-        
-        // Transform to { value, label } format
-        categories.value = allCategories.map(cat => ({
-          value: cat,
-          label: categoryLabels[cat] || cat
-        }))
+        // Only update if we got valid data (preserve hardcoded order if API fails)
+        if (Array.isArray(data) && data.length > 0) {
+          const allCategories = ['', ...data.filter(c => c !== '')]
+          categories.value = allCategories.map(cat => ({
+            value: cat,
+            label: categoryLabels[cat] || cat
+          }))
+        }
         
         // Update scroll fade indicators after categories load
         setTimeout(handleCategoryScroll, 100)
       } catch (err) {
-        console.error('Error fetching categories:', err)
-        // Fallback categories with "All" option
-        categories.value = [
-          { value: '', label: '全部' },
-          { value: 'AI', label: 'AI' },
-          { value: '前端', label: '前端' },
-          { value: '后端', label: '后端' },
-          { value: '云原生', label: '云原生' },
-          { value: '区块链', label: '区块链' },
-          { value: '其他', label: '其他' }
-        ]
+        // Silently use hardcoded defaults - no error needed since we have fallback data
+        console.log('Using default categories (API unavailable or slow)')
       }
       
       // Ensure current category is valid after loading categories

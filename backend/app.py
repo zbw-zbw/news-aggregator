@@ -96,12 +96,12 @@ def get_news_detail(news_id):
 CATEGORY_ORDER = ['', 'AI', '前端', '后端', '云原生', '区块链', '其他']
 
 @app.route('/api/categories', methods=['GET'])
-@cache.cached(timeout=3600)
 def get_categories():
     """Get all available categories in predefined order."""
-    # Hard-coded to avoid expensive DB query
-    categories = ['AI', '前端', '后端', '云原生', '区块链', '其他']
-    return jsonify(categories)
+    # Hard-coded to avoid any DB query or computation
+    # Note: Intentionally NOT using cache decorator since this is a static array
+    # and cache lookup overhead may exceed direct response time
+    return jsonify(['AI', '前端', '后端', '云原生', '区块链', '其他'])
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
