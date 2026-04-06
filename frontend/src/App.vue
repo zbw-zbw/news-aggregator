@@ -31,16 +31,16 @@
     <!-- ========== Controls Bar (Sticky) ========== -->
     <div class="bg-white border-b border-slate-200 sticky top-[56px] z-40">
       <div class="max-w-5xl mx-auto px-4 sm:px-6 py-3">
-        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div class="flex flex-wrap items-center justify-between gap-3">
           <!-- Category Tabs -->
-          <div class="relative w-fit max-w-full">
+          <div class="relative w-fit max-w-full flex-shrink-0">
             <!-- Left fade indicator -->
             <div class="absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none opacity-0 transition-opacity duration-200" ref="leftFade"></div>
             <!-- Right fade indicator -->
             <div class="absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" ref="rightFade"></div>
             <!-- Scrollable tabs with background -->
-            <div 
-              class="overflow-x-auto scrollbar-hide p-1 bg-slate-100 rounded-lg" 
+            <div
+              class="overflow-x-auto scrollbar-hide p-1 bg-slate-100 rounded-lg"
               ref="categoryScroll"
               @scroll="handleCategoryScroll"
             >
@@ -63,7 +63,7 @@
           </div>
 
           <!-- Sort Toggle -->
-          <div class="flex items-center gap-2 flex-shrink-0">
+          <div class="flex items-center gap-2 flex-shrink-0 ml-auto">
             <div class="flex items-center bg-slate-100 rounded-lg p-0.5">
               <button
                 v-for="sort in sortOptions"
