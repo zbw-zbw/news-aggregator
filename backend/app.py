@@ -9,7 +9,7 @@ from flask import Flask, jsonify, request, g
 from flask_cors import CORS
 from flask_caching import Cache
 from models import db, News
-from sqlalchemy import text
+from sqlalchemy import text, or_
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -60,17 +60,30 @@ def get_news():
         - sort: 'newest' or 'hottest' (default: newest)
         - page: page number (default: 1)
         - per_page: items per page (default: 20, max: 100)
+        - search: search keyword for title and summary (optional)
     """
     category = request.args.get('category')
     sort = request.args.get('sort', 'newest')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
+    search = request.args.get('search', '').strip()
 
     per_page = max(1, min(per_page, 100))
 
     query = News.query
     if category:
         query = query.filter(News.category == category)
+
+    if search:
+        # Use LIKE search for simplicity and reliability
+        # FTS5 can be enabled later by running migrate_fts.py
+        search_pattern = f'%{search}%'
+        query = query.filter(
+            or_(
+                News.title.like(search_pattern),
+                News.summary.like(search_pattern)
+            )
+        )
 
     if sort == 'hottest':
         query = query.order_by(News.hot_score.desc())
@@ -132,6 +145,38 @@ def init_db():
                 db.session.execute(text(idx_sql))
             except Exception as e:
                 logger.warning(f"Index creation warning: {e}")
+        
+        # Create FTS5 virtual table for full-text search
+        fts_sql = '''
+            CREATE VIRTUAL TABLE IF NOT EXISTS news_fts USING fts5(
+                title, summary, content='news', content_rowid='id'
+            )
+        '''
+        try:
+            db.session.execute(text(fts_sql))
+            logger.info("FTS5 virtual table created.")
+        except Exception as e:
+            logger.warning(f"FTS5 table creation warning: {e}")
+        
+        # Create triggers to keep FTS table in sync with news table
+        triggers = [
+            '''CREATE TRIGGER IF NOT EXISTS news_ai AFTER INSERT ON news BEGIN
+                INSERT INTO news_fts(rowid, title, summary) VALUES (new.id, new.title, new.summary);
+            END''',
+            '''CREATE TRIGGER IF NOT EXISTS news_ad AFTER DELETE ON news BEGIN
+                INSERT INTO news_fts(news_fts, rowid, title, summary) VALUES('delete', old.id, old.title, old.summary);
+            END''',
+            '''CREATE TRIGGER IF NOT EXISTS news_au AFTER UPDATE ON news BEGIN
+                INSERT INTO news_fts(news_fts, rowid, title, summary) VALUES('delete', old.id, old.title, old.summary);
+                INSERT INTO news_fts(rowid, title, summary) VALUES (new.id, new.title, new.summary);
+            END''',
+        ]
+        for trigger_sql in triggers:
+            try:
+                db.session.execute(text(trigger_sql))
+            except Exception as e:
+                logger.warning(f"Trigger creation warning: {e}")
+        
         db.session.commit()
         logger.info("init_db completed.")
 

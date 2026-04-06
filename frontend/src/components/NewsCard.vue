@@ -38,14 +38,10 @@
     </div>
 
     <!-- Title -->
-    <h3 class="text-base font-semibold text-slate-900 leading-snug mb-2 line-clamp-2 group-hover:text-brand-600 transition-colors break-all">
-      {{ news.title }}
-    </h3>
+    <h3 class="text-base font-semibold text-slate-900 leading-snug mb-2 line-clamp-2 group-hover:text-brand-600 transition-colors break-all" v-html="highlightText(news.title)"></h3>
 
     <!-- Summary - flex-grow to push meta to bottom -->
-    <p class="text-sm text-slate-500 leading-relaxed mb-3 line-clamp-2 flex-grow">
-      {{ news.summary }}
-    </p>
+    <p class="text-sm text-slate-500 leading-relaxed mb-3 line-clamp-2 flex-grow" v-html="highlightText(news.summary)"></p>
 
     <!-- Meta Info - always at bottom -->
     <div class="flex items-center justify-between text-xs text-slate-400 mt-auto">
@@ -79,9 +75,13 @@ export default {
     showHotScore: {
       type: Boolean,
       default: false
+    },
+    searchQuery: {
+      type: String,
+      default: ''
     }
   },
-  setup() {
+  setup(props) {
     // Get category tag style based on category name
     const getCategoryClass = (category) => {
       const baseClass = 'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium'
@@ -95,16 +95,6 @@ export default {
         'AI': 'bg-amber-50 text-amber-700',          // Amber gold - warm, distinct from red video badge
         '区块链': 'bg-violet-50 text-violet-700',    // Violet purple
         '其他': 'bg-gray-50 text-gray-600',          // Gray - neutral
-        // Legacy category mappings for backward compatibility during migration
-        '程序员圈': 'bg-blue-50 text-blue-700',
-        'AI圈': 'bg-emerald-50 text-emerald-700',
-        '前端圈': 'bg-orange-50 text-orange-700',
-        '后端圈': 'bg-indigo-50 text-indigo-700',
-        '云原生圈': 'bg-cyan-50 text-cyan-700',
-        '区块链圈': 'bg-purple-50 text-purple-700',
-        'AI+医疗圈': 'bg-rose-50 text-rose-700',
-        '技术视频': 'bg-red-50 text-red-700',
-        'AI研究': 'bg-teal-50 text-teal-700'
       }
       
       const colorClass = colorMap[category] || 'bg-slate-50 text-slate-700'
@@ -152,10 +142,25 @@ export default {
       return score.toFixed(2)
     }
 
+    // Highlight search keyword in text
+    const highlightText = (text) => {
+      if (!text || !props.searchQuery || !props.searchQuery.trim()) {
+        return text || ''
+      }
+      
+      // Escape special regex characters
+      const escapedQuery = props.searchQuery.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const regex = new RegExp(`(${escapedQuery})`, 'gi')
+      
+      // Replace matches with highlighted version
+      return text.replace(regex, '<mark class="bg-yellow-200 text-inherit rounded px-0.5">$1</mark>')
+    }
+
     return {
       getCategoryClass,
       formatTime,
-      formatScore
+      formatScore,
+      highlightText
     }
   }
 }

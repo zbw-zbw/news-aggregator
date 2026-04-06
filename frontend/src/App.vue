@@ -20,9 +20,81 @@
             </div>
           </div>
 
-          <!-- Date -->
-          <div class="text-sm text-slate-500">
-            <span>{{ currentDate }}</span>
+          <!-- Search Bar (Desktop) -->
+          <div class="flex-1 max-w-md mx-4 hidden sm:block">
+            <div class="relative">
+              <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                v-model="searchQuery"
+                @input="handleSearchInput"
+                @compositionstart="isComposing = true"
+                @compositionend="handleCompositionEnd"
+                @keyup.enter="handleSearchEnter"
+                type="text"
+                placeholder="搜索新闻..."
+                class="w-full pl-10 pr-8 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all duration-200"
+              />
+              <button
+                v-if="searchQuery"
+                @click="clearSearch"
+                class="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Right side: Search icon (mobile) + Date -->
+          <div class="flex items-center gap-2">
+            <!-- Mobile Search Toggle -->
+            <button
+              @click="toggleMobileSearch"
+              class="sm:hidden p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            >
+              <svg v-if="!showMobileSearch" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <!-- Date -->
+            <div class="text-sm text-slate-500 hidden sm:block">
+              <span>{{ currentDate }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Mobile Search Bar -->
+        <div v-if="showMobileSearch" class="sm:hidden pb-3">
+          <div class="relative">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              ref="mobileSearchInput"
+              v-model="searchQuery"
+              @input="handleSearchInput"
+              @compositionstart="isComposing = true"
+              @compositionend="handleCompositionEnd"
+              @keyup.enter="handleSearchEnter"
+              type="text"
+              placeholder="搜索新闻..."
+              class="w-full pl-10 pr-8 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all duration-200"
+            />
+            <button
+              v-if="searchQuery"
+              @click="clearSearch"
+              class="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
@@ -117,6 +189,7 @@
           :key="item.id"
           :news="item"
           :show-hot-score="currentSort === 'hottest'"
+          :search-query="searchQuery"
         />
       </div>
 
@@ -286,7 +359,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { inject } from '@vercel/analytics'
 import NewsCard from './components/NewsCard.vue'
 import SkeletonCard from './components/SkeletonCard.vue'
@@ -327,6 +400,11 @@ export default {
     const loading = ref(true)
     const error = ref(null)
     const jumpPageInput = ref('')
+    const searchQuery = ref('')
+    const isComposing = ref(false)
+    const showMobileSearch = ref(false)
+    const mobileSearchInput = ref(null)
+    let searchDebounce = null
     
     // Refs for category scroll
     const categoryScroll = ref(null)
@@ -419,6 +497,11 @@ export default {
           per_page: pageSize.value
         })
 
+        // Add search parameter if present
+        if (searchQuery.value.trim()) {
+          params.append('search', searchQuery.value.trim())
+        }
+
         const response = await fetch(`${API_BASE}/api/news?${params}`)
         if (!response.ok) throw new Error('网络请求失败')
         
@@ -463,6 +546,54 @@ export default {
         currentSort.value = sort
         currentPage.value = 1
       }
+    }
+
+    // Handle search input with debounce (skip during IME composition)
+    const handleSearchInput = () => {
+      // Don't search while composing (e.g., Chinese IME input)
+      if (isComposing.value) return
+      
+      clearTimeout(searchDebounce)
+      searchDebounce = setTimeout(() => {
+        currentPage.value = 1
+        fetchNews()
+      }, 500)  // Increased debounce to 500ms
+    }
+
+    // Handle composition end (Chinese IME finished)
+    const handleCompositionEnd = () => {
+      isComposing.value = false
+      // Trigger search after composition ends
+      clearTimeout(searchDebounce)
+      searchDebounce = setTimeout(() => {
+        currentPage.value = 1
+        fetchNews()
+      }, 300)
+    }
+
+    // Handle Enter key for immediate search
+    const handleSearchEnter = () => {
+      clearTimeout(searchDebounce)
+      currentPage.value = 1
+      fetchNews()
+    }
+
+    // Toggle mobile search bar
+    const toggleMobileSearch = () => {
+      showMobileSearch.value = !showMobileSearch.value
+      if (showMobileSearch.value) {
+        // Focus input after showing
+        nextTick(() => {
+          mobileSearchInput.value?.focus()
+        })
+      }
+    }
+
+    // Clear search and refetch
+    const clearSearch = () => {
+      searchQuery.value = ''
+      currentPage.value = 1
+      fetchNews()
     }
 
     // Go to specific page
@@ -591,6 +722,10 @@ export default {
       error,
       currentDate,
       jumpPageInput,
+      searchQuery,
+      isComposing,
+      showMobileSearch,
+      mobileSearchInput,
       categoryScroll,
       leftFade,
       rightFade,
@@ -599,6 +734,11 @@ export default {
       handleCategoryScroll,
       handlePageSizeChange,
       handleJumpPage,
+      handleSearchInput,
+      handleCompositionEnd,
+      handleSearchEnter,
+      toggleMobileSearch,
+      clearSearch,
       switchCategory,
       switchSort,
       goToPage
