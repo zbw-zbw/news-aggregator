@@ -653,52 +653,16 @@ export default {
     
     // Fetch categories from API (for validation, but UI already has defaults)
     const fetchCategories = async () => {
-      // Use a short timeout to prevent blocking page load
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 3000) // 3 second timeout
-      
-      try {
-        const response = await fetch(`${API_BASE}/api/categories`, {
-          signal: controller.signal
-        })
-        clearTimeout(timeoutId)
-        
-        if (!response.ok) throw new Error('Failed to fetch categories')
-        
-        const data = await response.json()
-        // Only update if we got valid data (preserve hardcoded order if API fails)
-        if (Array.isArray(data) && data.length > 0) {
-          const allCategories = ['', ...data.filter(c => c !== '')]
-          categories.value = allCategories.map(cat => ({
-            value: cat,
-            label: categoryLabels[cat] || cat
-          }))
-        }
-        
-        // Update scroll fade indicators after categories load
-        setTimeout(handleCategoryScroll, 100)
-      } catch (err) {
-        // Silently use hardcoded defaults - no error needed since we have fallback data
-        console.log('Using default categories (API unavailable or slow)')
-      }
-      
-      // Ensure current category is valid after loading categories
-      const validValues = categories.value.map(c => c.value)
-      if (!validValues.includes(currentCategory.value)) {
-        currentCategory.value = '' // Default to "All"
-      }
+      // Categories are hardcoded - no API call needed
+      // This function is kept for potential future use but does nothing
+      return
     }
 
     // Initial fetch
     onMounted(() => {
       inject()
-      // Fetch categories first, then fetch news
-      // We need to fetch categories to know the order, but 'All' (empty) is always valid
-      fetchCategories().then(() => {
-        // Always fetch news after categories are loaded
-        // This ensures news load on first visit even if default category is already 'All'
-        fetchNews()
-      })
+      // Fetch news immediately - categories are hardcoded
+      fetchNews()
       // Update fade indicators on window resize
       window.addEventListener('resize', handleCategoryScroll)
     })

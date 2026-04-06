@@ -37,6 +37,26 @@ db.init_app(app)
 # NOTE: Removed import-time index creation to avoid blocking during app import/startup.
 # Index creation is only done inside init_db() and should be executed once during deployment.
 
+
+def warmup_db():
+    """Warm up database connection and cache indexes."""
+    logger.info("Warming up database connection...")
+    try:
+        # Execute simple queries to load indexes into memory
+        # This prevents cold-start slowness on first real request
+        db.session.execute(text('SELECT 1 FROM news LIMIT 1'))
+        db.session.execute(text('SELECT 1 FROM news WHERE category IS NOT NULL LIMIT 1'))
+        db.session.execute(text('SELECT 1 FROM news ORDER BY published DESC LIMIT 1'))
+        db.session.commit()
+        logger.info("Database warmup complete.")
+    except Exception as e:
+        logger.warning(f"Database warmup warning: {e}")
+
+
+# Warm up database on app creation (works for both local and gunicorn)
+with app.app_context():
+    warmup_db()
+
 @app.before_request
 def start_timer():
     """Start request timing."""
@@ -187,5 +207,4 @@ if __name__ == '__main__':
         print("Database initialized (init_db).")
         sys.exit(0)
 
-    init_db() if os.environ.get('FORCE_INIT_DB_ON_START', '0') == '1' else None
     app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 5001)))
