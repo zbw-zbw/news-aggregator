@@ -117,9 +117,6 @@ YOUTUBE_SOURCES = {
     ],
 }
 
-# arXiv RSS Sources merged into AI category
-ARXIV_SOURCES = {}  # Empty - all arXiv sources moved to AI category above
-
 # User agent for requests
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -320,21 +317,6 @@ def run_crawler():
                 category,
                 source['weight'],
                 is_video=True
-            )
-            added, skipped = save_articles(articles)
-            total_added += added
-            total_skipped += skipped
-            time.sleep(1)
-
-    # Process arXiv RSS sources
-    for category, sources in ARXIV_SOURCES.items():
-        print(f"\n--- Processing arXiv category: {category} ---")
-        for source in sources:
-            articles = fetch_rss_feed(
-                source['url'],
-                source['name'],
-                category,
-                source['weight']
             )
             added, skipped = save_articles(articles)
             total_added += added

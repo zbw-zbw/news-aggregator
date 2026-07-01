@@ -92,7 +92,7 @@ CATEGORY_NAME_MAP = {
 }
 
 
-def classify_by_title(title, default_category='其他技术'):
+def classify_by_title(title, default_category='其他'):
     """
     Classify news based on title keywords.
     
@@ -163,5 +163,5 @@ if __name__ == '__main__':
     ]
     
     for title, source in test_titles:
-        category = get_category_for_article(title, source, '其他技术')
+        category = get_category_for_article(title, source, '其他')
         print(f"[{source}] {title[:40]}... -> {category}")

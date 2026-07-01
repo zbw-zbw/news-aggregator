@@ -160,7 +160,7 @@
     <main class="flex-grow max-w-5xl mx-auto px-4 sm:px-6 py-6 w-full">
       <!-- Loading State - Skeleton Cards -->
       <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <SkeletonCard v-for="i in 6" :key="i" />
+        <SkeletonCard v-for="i in 4" :key="i" />
       </div>
 
       <!-- Error State -->
@@ -363,6 +363,9 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { inject } from '@vercel/analytics'
 import NewsCard from './components/NewsCard.vue'
 import SkeletonCard from './components/SkeletonCard.vue'
+
+// Initialize Vercel Analytics
+inject()
 
 export default {
   name: 'App',
@@ -644,26 +647,10 @@ export default {
     watch([currentCategory, currentSort, currentPage], () => {
       fetchNews()
     })
-
-    // Category display names mapping
-    const categoryLabels = {
-      '': '全部',
-      '其他': '其他'
-    }
     
-    // Fetch categories from API (for validation, but UI already has defaults)
-    const fetchCategories = async () => {
-      // Categories are hardcoded - no API call needed
-      // This function is kept for potential future use but does nothing
-      return
-    }
-
     // Initial fetch
     onMounted(() => {
-      inject()
-      // Fetch news immediately - categories are hardcoded
       fetchNews()
-      // Update fade indicators on window resize
       window.addEventListener('resize', handleCategoryScroll)
     })
 
@@ -694,7 +681,6 @@ export default {
       leftFade,
       rightFade,
       fetchNews,
-      fetchCategories,
       handleCategoryScroll,
       handlePageSizeChange,
       handleJumpPage,

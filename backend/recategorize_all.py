@@ -97,21 +97,21 @@ def recategorize_all_news(db_path='news.db', dry_run=False):
 
 def recategorize_misc_only(db_path='news.db', dry_run=False):
     """
-    Only recategorize news in '其他技术' category.
+    Only recategorize news in '其他' category.
     Faster and safer for regular maintenance.
     """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
-    # Get only '其他技术' news
-    cursor.execute("SELECT id, title, source, category FROM news WHERE category = '其他技术'")
+    # Get only '其他' news (supports both old '其他技术' and new '其他')
+    cursor.execute("SELECT id, title, source, category FROM news WHERE category IN ('其他', '其他技术')")
     rows = cursor.fetchall()
     
-    print(f"'其他技术' news to process: {len(rows)}")
+    print(f"'其他' news to process: {len(rows)}")
     print("=" * 80)
     
     if not rows:
-        print("No '其他技术' news to recategorize.")
+        print("No '其他' news to recategorize.")
         conn.close()
         return
     
@@ -121,7 +121,7 @@ def recategorize_misc_only(db_path='news.db', dry_run=False):
     for news_id, title, source, current_category in rows:
         new_category = classify_by_title(title, current_category)
         
-        if new_category != current_category:
+        if new_category != current_category and new_category != '其他' and new_category != '其他技术':
             if new_category not in changes:
                 changes[new_category] = []
             changes[new_category].append((news_id, title, source))
@@ -131,7 +131,7 @@ def recategorize_misc_only(db_path='news.db', dry_run=False):
     print("-" * 80)
     total_changes = 0
     for new_cat, items in sorted(changes.items(), key=lambda x: len(x[1]), reverse=True):
-        print(f"\n其他技术 -> {new_cat}: {len(items)} articles")
+        print(f"\n其他 -> {new_cat}: {len(items)} articles")
         total_changes += len(items)
         for news_id, title, source in items[:3]:
             print(f"  - {title[:60]}... ({source})")
@@ -140,9 +140,9 @@ def recategorize_misc_only(db_path='news.db', dry_run=False):
     
     print(f"\n{'=' * 80}")
     print(f"Summary:")
-    print(f"  Total '其他技术': {len(rows)}")
+    print(f"  Total '其他': {len(rows)}")
     print(f"  Will be recategorized: {total_changes}")
-    print(f"  Remain '其他技术': {len(rows) - total_changes}")
+    print(f"  Remain '其他': {len(rows) - total_changes}")
     
     if dry_run:
         print("\n[DRY RUN] No changes applied.")

@@ -2,7 +2,7 @@
 """
 Database migration script for category refactoring.
 Migrates from old categories to new 6-category system:
-- 前端, 后端, 云原生, 人工智能, 区块链, 其他技术
+- 前端, 后端, 云原生, AI, 区块链, 其他
 
 Also creates necessary indexes for performance.
 
@@ -113,13 +113,13 @@ def migrate_database():
         if count > 0:
             print(f"  ✓ '{old_cat}' → '{new_cat}': {count} items")
     
-    # Merge AI-related categories
+    # Merge AI-related categories → 'AI'
     ai_categories = ['AI圈', 'AI研究', 'AI+医疗圈']
     for old_cat in ai_categories:
-        cursor.execute("UPDATE news SET category = '人工智能' WHERE category = ?", (old_cat,))
+        cursor.execute("UPDATE news SET category = 'AI' WHERE category = ?", (old_cat,))
         count = cursor.rowcount
         if count > 0:
-            print(f"  ✓ '{old_cat}' → '人工智能': {count} items")
+            print(f"  ✓ '{old_cat}' → 'AI': {count} items")
     
     # Migrate 技术视频 based on source (already marked as is_video)
     # Fireship -> 前端 (general frontend content)
@@ -131,23 +131,23 @@ def migrate_database():
     if count > 0:
         print(f"  ✓ '技术视频' (Fireship) → '前端': {count} items")
     
-    # 3Blue1Brown -> 人工智能 (math/ML visualizations)
+    # 3Blue1Brown -> AI (math/ML visualizations)
     cursor.execute("""
-        UPDATE news SET category = '人工智能' 
+        UPDATE news SET category = 'AI' 
         WHERE category = '技术视频' AND source LIKE '%3Blue1Brown%'
     """)
     count = cursor.rowcount
     if count > 0:
-        print(f"  ✓ '技术视频' (3Blue1Brown) → '人工智能': {count} items")
+        print(f"  ✓ '技术视频' (3Blue1Brown) → 'AI': {count} items")
     
-    # Other tech videos -> 其他技术
+    # Other tech videos -> 其他
     cursor.execute("""
-        UPDATE news SET category = '其他技术' 
+        UPDATE news SET category = '其他' 
         WHERE category = '技术视频'
     """)
     count = cursor.rowcount
     if count > 0:
-        print(f"  ✓ '技术视频' (others) → '其他技术': {count} items")
+        print(f"  ✓ '技术视频' (others) → '其他': {count} items")
     
     # Migrate 程序员圈 based on title keywords
     print("\n  Processing '程序员圈' by title keywords...")
@@ -184,7 +184,7 @@ def migrate_database():
                    'CV', '神经网络', 'Transformer', 'ChatGPT', 'Claude']
     for keyword in ai_keywords:
         cursor.execute("""
-            UPDATE news SET category = '人工智能' 
+            UPDATE news SET category = 'AI' 
             WHERE category = '程序员圈' AND title LIKE ?
         """, (f'%{keyword}%',))
     
@@ -197,14 +197,14 @@ def migrate_database():
             WHERE category = '程序员圈' AND title LIKE ?
         """, (f'%{keyword}%',))
     
-    # Remaining 程序员圈 -> 其他技术
+    # Remaining 程序员圈 -> 其他
     cursor.execute("""
-        UPDATE news SET category = '其他技术' 
+        UPDATE news SET category = '其他' 
         WHERE category = '程序员圈'
     """)
     count = cursor.rowcount
     if count > 0:
-        print(f"  ✓ '程序员圈' (remaining) → '其他技术': {count} items")
+        print(f"  ✓ '程序员圈' (remaining) → '其他': {count} items")
     
     conn.commit()
     
